@@ -133,4 +133,14 @@ public class LeaveController {
             return ResponseEntity.ok(dtos);
         }
     }
+
+    @GetMapping("/on-leave")
+    public ResponseEntity<List<LeaveResponseDto>> getEmployeesOnLeave(
+            @RequestParam(required = false) @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE) LocalDate date,
+            @RequestParam(required = false) String department) {
+        User currentUser = currentUserProvider.getCurrentUser();
+        LocalDate targetDate = (date != null) ? date : LocalDate.now();
+        List<LeaveResponseDto> onLeave = leaveService.getEmployeesOnLeave(targetDate, department, currentUser);
+        return ResponseEntity.ok(onLeave);
+    }
 }

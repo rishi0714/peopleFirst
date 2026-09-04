@@ -327,4 +327,41 @@ class AgentServiceAgenticTest {
         assertEquals("REJECT_LEAVE", response.getActionName());
         assertTrue(response.getReply().contains("REJECTED"));
     }
+
+    @Test
+    void managerCanAskWhoIsOnLeaveScopedToDepartment() {
+        when(genAiClient.isConfigured()).thenReturn(false);
+        User manager = new User("mgr1", "mgr1@test.com", "hash", "Vikram Manager",
+                Role.MANAGER, false, "Engineering", "Bangalore", null, com.peoplefirst.user.entity.Gender.MALE);
+        manager.setId(UUID.randomUUID());
+        when(currentUserProvider.getCurrentUser()).thenReturn(manager);
+
+        LeaveResponseDto leave = Mockito.mock(LeaveResponseDto.class);
+        when(leave.getEmployeeName()).thenReturn("Rohan Verma");
+        when(leave.getDepartment()).thenReturn("Engineering");
+        when(leave.getLeaveTypeDisplayName()).thenReturn("Sick Leave");
+        when(leave.getStartDate()).thenReturn(LocalDate.now());
+        when(leave.getEndDate()).thenReturn(LocalDate.now().plusDays(2));
+        when(leave.isHalfDay()).thenReturn(false);
+
+        when(leaveService.getEmployeesOnLeave(eq(LocalDate.now()), eq("Engineering"), eq(manager)))
+                .thenReturn(List.of(leave));
+
+        AgentChatResponseDto response = agentService.processMessage(
+                new AgentChatRequestDto("who is on leave today", "conv-on-leave-1"));
+        assertTrue(response.isActionExecuted());
+        assertEquals("VIEW_ON_LEAVE", response.getActionName());
+        assertTrue(response.getReply().contains("Rohan Verma"));
+        assertTrue(response.getReply().contains("Engineering"));
+    }
+
+    @Test
+    void employeeAskingWhoIsOnLeaveIsDenied() {
+        when(genAiClient.isConfigured()).thenReturn(false);
+        AgentChatResponseDto response = agentService.processMessage(
+                new AgentChatRequestDto("who is on leave", "conv-on-leave-2"));
+        assertFalse(response.isActionExecuted());
+        assertTrue(response.getReply().contains("Managers") && response.getReply().contains("Administrators"));
+    }
 }
+

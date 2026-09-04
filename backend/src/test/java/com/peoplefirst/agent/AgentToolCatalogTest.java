@@ -14,12 +14,12 @@ class AgentToolCatalogTest {
     @Test
     void exposesSevenGroundedToolsWithStrictSchemas() {
         List<Map<String, Object>> schemas = new AgentToolCatalog().getSchemas();
-        assertEquals(7, schemas.size());
+        assertEquals(8, schemas.size());
         List<String> names = schemas.stream()
                 .map(s -> (String) ((Map<String, Object>) s.get("function")).get("name"))
                 .toList();
         assertTrue(names.containsAll(List.of("check_balance", "apply_leave", "cancel_leave",
-                "view_leaves", "get_policy", "wellbeing", "ticket_info")));
+                "view_leaves", "get_policy", "wellbeing", "ticket_info", "who_is_on_leave")));
         Map<String, Object> apply = schemas.stream()
                 .filter(s -> ((Map<String, Object>) s.get("function")).get("name").equals("apply_leave"))
                 .findFirst().orElseThrow();

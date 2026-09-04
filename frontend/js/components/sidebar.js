@@ -47,8 +47,11 @@ export const Sidebar = {
             <a class="nav-item ${currentView === 'approvals' ? 'active' : ''}" data-view="approvals">
               <span>✅</span> Team Approvals
             </a>
+            <a class="nav-item ${currentView === 'onLeave' ? 'active' : ''}" data-view="onLeave">
+              <span>👥</span> Who's on Leave
+            </a>
             <a class="nav-item ${currentView === 'teamBalances' ? 'active' : ''}" data-view="teamBalances">
-              <span>👥</span> Team Balances
+              <span>📊</span> Team Balances
             </a>
           ` : ''}
 
@@ -58,6 +61,9 @@ export const Sidebar = {
             </div>
             <a class="nav-item ${currentView === 'adminLeaves' ? 'active' : ''}" data-view="adminLeaves">
               <span>⚡</span> Org Leaves & Direct Edit
+            </a>
+            <a class="nav-item ${currentView === 'onLeave' ? 'active' : ''}" data-view="onLeave">
+              <span>👥</span> Who's on Leave
             </a>
             <a class="nav-item ${currentView === 'adminAudit' ? 'active' : ''}" data-view="adminAudit">
               <span>📜</span> System Audit Logs

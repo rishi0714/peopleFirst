@@ -26,6 +26,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
 
 import java.time.LocalDate;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -195,5 +196,68 @@ class LeaveServiceTest {
                 eq(leaveId), eq(employee.getId()), eq(employee.getFullName()), eq("EMPLOYEE"),
                 eq("EDIT"), eq("RETURNED"), eq("PENDING"), anyString(), eq(false), eq(false)
         );
+    }
+
+    @Test
+    @DisplayName("On-Leave: Manager sees only employees in their department; Admin sees all")
+    void testGetEmployeesOnLeaveScoping() {
+        User managerEng = new User("mgr1", "mgr1@test.com", "hash", "Eng Manager",
+                Role.MANAGER, false, "Engineering", "Bangalore", null, com.peoplefirst.user.entity.Gender.MALE);
+        managerEng.setId(UUID.randomUUID());
+
+        User adminUser = new User("admin1", "admin@test.com", "hash", "Admin User",
+                Role.ADMIN, false, "Executive", "Bangalore", null, com.peoplefirst.user.entity.Gender.FEMALE);
+        adminUser.setId(UUID.randomUUID());
+
+        User engEmployee = new User("engEmp", "eng@test.com", "hash", "Eng Employee",
+                Role.EMPLOYEE, false, "Engineering", "Bangalore", managerEng.getId(), com.peoplefirst.user.entity.Gender.MALE);
+        engEmployee.setId(UUID.randomUUID());
+
+        User prodEmployee = new User("prodEmp", "prod@test.com", "hash", "Prod Employee",
+                Role.EMPLOYEE, false, "Product", "Hyderabad", null, com.peoplefirst.user.entity.Gender.FEMALE);
+        prodEmployee.setId(UUID.randomUUID());
+
+        LocalDate targetDate = LocalDate.of(2026, 9, 8);
+
+        LeaveRequest engLeave = new LeaveRequest(
+                engEmployee.getId(), LeaveType.SICK, null,
+                targetDate, targetDate.plusDays(1), 2.0,
+                false, null, "Cold", null, false, targetDate.minusDays(1)
+        );
+        engLeave.setId(UUID.randomUUID());
+        engLeave.setStatus(LeaveStatus.APPROVED);
+
+        LeaveRequest prodLeave = new LeaveRequest(
+                prodEmployee.getId(), LeaveType.CASUAL, null,
+                targetDate, targetDate.plusDays(1), 2.0,
+                false, null, "Personal", null, false, targetDate.minusDays(1)
+        );
+        prodLeave.setId(UUID.randomUUID());
+        prodLeave.setStatus(LeaveStatus.APPROVED);
+
+        when(leaveRequestRepository.findByStatusInAndStartDateLessThanEqualAndEndDateGreaterThanEqual(
+                eq(List.of(LeaveStatus.APPROVED)), eq(targetDate), eq(targetDate)
+        )).thenReturn(List.of(engLeave, prodLeave));
+
+        when(userService.getUserEntityById(engEmployee.getId())).thenReturn(engEmployee);
+        when(userService.getUserEntityById(prodEmployee.getId())).thenReturn(prodEmployee);
+
+        // 1. Manager of Engineering queries -> sees ONLY engEmployee
+        List<LeaveResponseDto> managerResults = leaveService.getEmployeesOnLeave(targetDate, null, managerEng);
+        assertEquals(1, managerResults.size());
+        assertEquals(engEmployee.getFullName(), managerResults.get(0).getEmployeeName());
+
+        // 2. Admin queries without department filter -> sees BOTH engEmployee and prodEmployee
+        List<LeaveResponseDto> adminResultsAll = leaveService.getEmployeesOnLeave(targetDate, null, adminUser);
+        assertEquals(2, adminResultsAll.size());
+
+        // 3. Admin queries with "Product" filter -> sees ONLY prodEmployee
+        List<LeaveResponseDto> adminResultsProduct = leaveService.getEmployeesOnLeave(targetDate, "Product", adminUser);
+        assertEquals(1, adminResultsProduct.size());
+        assertEquals(prodEmployee.getFullName(), adminResultsProduct.get(0).getEmployeeName());
+
+        // 4. Employee queries -> throws AccessDeniedException
+        assertThrows(org.springframework.security.access.AccessDeniedException.class, () ->
+                leaveService.getEmployeesOnLeave(targetDate, null, employee));
     }
 }

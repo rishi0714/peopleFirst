@@ -17,4 +17,8 @@ public interface LeaveRequestRepository extends JpaRepository<LeaveRequest, UUID
     List<LeaveRequest> findByUserIdAndStatusIn(UUID userId, List<LeaveStatus> statuses);
     List<LeaveRequest> findAllByOrderByCreatedAtDesc();
     List<LeaveRequest> findByUserIdAndStartDateAfter(UUID userId, LocalDate date);
+    List<LeaveRequest> findByStatusAndStartDateLessThanEqualAndEndDateGreaterThanEqual(LeaveStatus status, LocalDate date1, LocalDate date2);
+    List<LeaveRequest> findByStatusInAndStartDateLessThanEqualAndEndDateGreaterThanEqual(List<LeaveStatus> statuses, LocalDate date1, LocalDate date2);
+    List<LeaveRequest> findByStatus(LeaveStatus status);
+    List<LeaveRequest> findByStatusIn(List<LeaveStatus> statuses);
 }

@@ -47,6 +47,14 @@ public class AgentToolCatalog {
                 schema(AgentTool.TICKET_INQUIRY,
                         "Get information about the user's support tickets. Never invent ticket details.",
                         Map.of(),
+                        List.of()),
+                schema(AgentTool.WHO_IS_ON_LEAVE,
+                        "Check which employees are currently on leave or on a specific date. Managers see their own department; Admins see org-wide.",
+                        Map.of(
+                                "date", Map.of("type", "string",
+                                        "description", "Target date in ISO YYYY-MM-DD format. Omit for today."),
+                                "department", Map.of("type", "string",
+                                        "description", "Optional department filter for Admin.")),
                         List.of()));
     }
 

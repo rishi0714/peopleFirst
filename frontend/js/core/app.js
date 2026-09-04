@@ -23,6 +23,7 @@ import { AdminAuditView } from '../features/admin/adminAuditView.js';
 import { PolicyView } from '../features/policy/policyView.js';
 import { TicketView } from '../features/ticket/ticketView.js';
 import { WellnessView } from '../features/leave/wellnessView.js';
+import { OnLeaveView } from '../features/leave/onLeaveView.js';
 
 class App {
   init() {
@@ -148,6 +149,15 @@ class App {
       case 'wellness':
         container.innerHTML = await WellnessView.render();
         await WellnessView.attachEvents();
+        break;
+
+      case 'onLeave':
+        if (!Auth.isManager() && !Auth.isAdmin()) {
+          Router.navigate('dashboard');
+          return;
+        }
+        container.innerHTML = OnLeaveView.render();
+        await OnLeaveView.attachEvents();
         break;
 
       default:

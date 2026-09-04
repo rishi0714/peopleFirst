@@ -17,6 +17,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -366,5 +367,46 @@ public class LeaveService {
         );
 
         return leaveMapper.toDto(saved, leaveOwner);
+    }
+
+    /**
+     * Retrieves all employees on approved leave on a given date.
+     * Admin: Org-wide (all departments or filtered).
+     * Manager: Strictly scoped to manager's own department.
+     * Others: Access denied.
+     */
+    public List<LeaveResponseDto> getEmployeesOnLeave(LocalDate targetDate, String departmentFilter, User currentUser) {
+        if (currentUser.getRole() != Role.ADMIN && currentUser.getRole() != Role.MANAGER) {
+            throw new AccessDeniedException("Only Managers and Administrators have permission to view employees on leave.");
+        }
+
+        if (targetDate == null) {
+            targetDate = LocalDate.now();
+        }
+
+        // Enforce department boundary for Managers
+        String effectiveDepartment = departmentFilter;
+        if (currentUser.getRole() == Role.MANAGER) {
+            effectiveDepartment = currentUser.getDepartment();
+        }
+
+        List<LeaveRequest> activeLeaves = leaveRequestRepository.findByStatusInAndStartDateLessThanEqualAndEndDateGreaterThanEqual(
+                List.of(LeaveStatus.APPROVED),
+                targetDate,
+                targetDate
+        );
+
+        List<LeaveResponseDto> results = new ArrayList<>();
+        for (LeaveRequest req : activeLeaves) {
+            try {
+                User leaveOwner = userService.getUserEntityById(req.getUserId());
+                if (effectiveDepartment == null || effectiveDepartment.trim().isEmpty() ||
+                        (leaveOwner.getDepartment() != null && leaveOwner.getDepartment().equalsIgnoreCase(effectiveDepartment.trim()))) {
+                    results.add(leaveMapper.toDto(req, leaveOwner));
+                }
+            } catch (Exception ignored) {}
+        }
+
+        return results;
     }
 }

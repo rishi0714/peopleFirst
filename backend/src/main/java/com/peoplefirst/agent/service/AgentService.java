@@ -193,6 +193,7 @@ public class AgentService {
                 intent == AgentIntent.CHECK_POLICY ||
                 intent == AgentIntent.RAISE_TICKET ||
                 intent == AgentIntent.ADMIN_DIRECT_EDIT ||
+                intent == AgentIntent.VIEW_ON_LEAVE ||
                 intent == AgentIntent.CANCEL_LEAVE ||
                 intent == AgentIntent.EDIT_LEAVE ||
                 intent == AgentIntent.GREETING);
@@ -269,6 +270,8 @@ public class AgentService {
                 return handleRaiseTicket(message, user);
             case ADMIN_DIRECT_EDIT:
                 return handleAdminDirectEdit(message, user);
+            case VIEW_ON_LEAVE:
+                return handleWhoIsOnLeave(message, user);
             case UNKNOWN:
             default:
                 if (draft != null) {
@@ -417,6 +420,12 @@ public class AgentService {
                     }
                     case TICKET_INQUIRY -> {
                         AgentChatResponseDto toolResponse = handleTicketInquiry(user);
+                        lastToolResponse = toolResponse;
+                        appendToHistory(history, Map.of("role", "tool",
+                                "tool_call_id", toolCallId, "content", toCompactJson(toolResponse.getActionData())));
+                    }
+                    case WHO_IS_ON_LEAVE -> {
+                        AgentChatResponseDto toolResponse = handleWhoIsOnLeave(message, user);
                         lastToolResponse = toolResponse;
                         appendToHistory(history, Map.of("role", "tool",
                                 "tool_call_id", toolCallId, "content", toCompactJson(toolResponse.getActionData())));
@@ -2072,6 +2081,90 @@ public class AgentService {
         } catch (Exception e) {
             return new AgentChatResponseDto("❌ Admin direct-DB-edit failed: " + e.getMessage(), AgentIntent.ADMIN_DIRECT_EDIT.name());
         }
+    }
+
+    private AgentChatResponseDto handleWhoIsOnLeave(String message, User user) {
+        if (user.getRole() != Role.ADMIN && user.getRole() != Role.MANAGER) {
+            return new AgentChatResponseDto(
+                    "Viewing who is on leave is restricted to Managers (department-level) and Administrators (organization-wide).",
+                    AgentIntent.VIEW_ON_LEAVE.name()
+            );
+        }
+
+        LocalDate targetDate = LocalDate.now();
+        LocalDate[] extractedDates = intentParser.extractDates(message);
+        if (extractedDates[0] != null) {
+            targetDate = extractedDates[0];
+        }
+
+        String deptFilter = null;
+        if (user.getRole() == Role.ADMIN) {
+            String lower = message.toLowerCase();
+            if (lower.contains("engineering")) deptFilter = "Engineering";
+            else if (lower.contains("product")) deptFilter = "Product";
+            else if (lower.contains("hr") || lower.contains("human resources")) deptFilter = "Human Resources";
+            else if (lower.contains("executive")) deptFilter = "Executive";
+            else if (lower.contains("sales")) deptFilter = "Sales";
+            else if (lower.contains("marketing")) deptFilter = "Marketing";
+            else if (lower.contains("operations")) deptFilter = "Operations";
+        } else {
+            deptFilter = user.getDepartment();
+        }
+
+        List<LeaveResponseDto> onLeaveList = leaveService.getEmployeesOnLeave(targetDate, deptFilter, user);
+
+        String dateFormatted = IntentParser.formatDate(targetDate);
+        boolean isToday = targetDate.equals(LocalDate.now());
+        String dateLabel = isToday ? "today (" + dateFormatted + ")" : "on " + dateFormatted;
+
+        StringBuilder sb = new StringBuilder();
+        if (user.getRole() == Role.ADMIN) {
+            if (deptFilter != null) {
+                sb.append("👥 **Employees on Leave in ").append(deptFilter).append(" (").append(dateLabel).append(")**:\n\n");
+            } else {
+                sb.append("🌐 **Organization-Wide Employees on Leave (").append(dateLabel).append(")**:\n\n");
+            }
+        } else {
+            sb.append("👥 **Employees on Leave in ").append(user.getDepartment()).append(" Department (").append(dateLabel).append(")**:\n\n");
+        }
+
+        if (onLeaveList.isEmpty()) {
+            if (user.getRole() == Role.ADMIN && deptFilter == null) {
+                sb.append("✅ No employees are on leave organization-wide ").append(dateLabel).append(".");
+            } else {
+                sb.append("✅ No employees in the **").append(deptFilter != null ? deptFilter : user.getDepartment())
+                        .append("** department are on leave ").append(dateLabel).append(".");
+            }
+        } else {
+            for (LeaveResponseDto l : onLeaveList) {
+                sb.append("• **").append(l.getEmployeeName()).append("**");
+                if (l.getDepartment() != null && !l.getDepartment().isEmpty()) {
+                    sb.append(" (").append(l.getDepartment()).append(")");
+                }
+                sb.append("\n");
+                sb.append("   - **Type:** ").append(l.getLeaveTypeDisplayName());
+                if (l.isHalfDay()) {
+                    sb.append(" (Half Day - ").append(l.getHalfDaySession()).append(")");
+                }
+                sb.append("\n");
+                sb.append("   - **Duration:** ").append(l.getStartDate()).append(" to ").append(l.getEndDate())
+                        .append(" (").append(l.getTotalDays()).append(" days)\n");
+                if (l.getReason() != null && !l.getReason().isBlank()) {
+                    sb.append("   - **Reason:** _").append(l.getReason()).append("_\n");
+                }
+                sb.append("\n");
+            }
+        }
+
+        AgentChatResponseDto response = new AgentChatResponseDto(sb.toString(), AgentIntent.VIEW_ON_LEAVE.name());
+        response.setActionExecuted(true);
+        response.setActionName("VIEW_ON_LEAVE");
+        response.setActionData(onLeaveList);
+        List<String> replies = user.getRole() == Role.ADMIN
+                ? List.of("Who is on leave tomorrow", "Who is on leave in Engineering", "Pending approvals", "Team balances")
+                : List.of("Who is on leave tomorrow", "Pending approvals", "Team balances", "Check my balances");
+        response.setQuickReplies(replies);
+        return response;
     }
 
     private LeaveResponseDto resolveTargetLeave(String message, User user) {

@@ -53,6 +53,10 @@ public class IntentParser {
     private static final List<String> TEAM_BALANCE_KEYWORDS = Arrays.asList(
             "team balance", "team balances", "team leave", "team's balance", "reportees balance", "reportee balance"
     );
+    private static final List<String> ON_LEAVE_KEYWORDS = Arrays.asList(
+            "on leave", "off today", "who is on leave", "whos on leave", "who are on leave",
+            "absent", "who is off", "department on leave", "team on leave"
+    );
 
     // --- Leave type names for fuzzy matching ---
     private static final List<String> CASUAL_NAMES = Arrays.asList("casual");
@@ -125,6 +129,18 @@ public class IntentParser {
                 lower.contains("reportee balance") || lower.contains("my team's balance") ||
                 lower.contains("team's leave") || lower.contains("team leave balance")) {
             return AgentIntent.CHECK_TEAM_BALANCES;
+        }
+
+        // 2.5 Who is on leave oversight (Manager department / Admin org-wide)
+        if (lower.contains("who is on leave") || lower.contains("who's on leave") || lower.contains("whos on leave") ||
+                lower.contains("who are on leave") || lower.contains("who all are on leave") ||
+                lower.contains("who is off") || lower.contains("whos off") || lower.contains("who's off") ||
+                lower.contains("who is absent") || lower.contains("who is out") || lower.contains("who is on holiday") ||
+                lower.contains("on leave today") || lower.contains("on leave tomorrow") ||
+                lower.contains("department on leave") || lower.contains("team on leave") || lower.contains("employees on leave") ||
+                lower.contains("kaun chutti par hai") || lower.contains("kon chutti pe hai") || lower.contains("kon chutti par hai") ||
+                lower.equals("who is on leave") || lower.equals("on leave") || lower.equals("whos on leave") || lower.equals("who's on leave")) {
+            return AgentIntent.VIEW_ON_LEAVE;
         }
 
         // 3. Cancel / Withdraw Leave
@@ -336,6 +352,13 @@ public class IntentParser {
         }
         if (hasFuzzyKeyword(lower, TEAM_BALANCE_KEYWORDS, 2)) {
             return AgentIntent.CHECK_TEAM_BALANCES;
+        }
+
+        // Check fuzzy who is on leave
+        if (hasFuzzyKeyword(lower, ON_LEAVE_KEYWORDS, 2) ||
+                ((lower.contains("who") || lower.contains("kaun") || lower.contains("kon")) &&
+                        (hasFuzzyKeyword(lower, LEAVE_KEYWORDS, 2) || lower.contains("off") || lower.contains("absent")))) {
+            return AgentIntent.VIEW_ON_LEAVE;
         }
 
         // Fuzzy greeting

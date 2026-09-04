@@ -17,6 +17,7 @@ public enum AgentIntent {
     TICKET_INQUIRY,
     RAISE_TICKET,
     ADMIN_DIRECT_EDIT,
+    VIEW_ON_LEAVE,
     GREETING,
     UNKNOWN
 }
