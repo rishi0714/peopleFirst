@@ -51,6 +51,10 @@ public class LeaveService {
     @Transactional
     public LeaveResponseDto applyLeave(CreateLeaveRequestDto dto, User user) {
         double totalDays = leaveValidator.calculateTotalDays(dto.getStartDate(), dto.getEndDate(), dto.isHalfDay());
+        leaveValidator.validateNoOverlap(user.getId(), dto.getStartDate(), dto.getEndDate(), dto.isHalfDay(), dto.getHalfDaySession(), null);
+        if (dto.isHalfDay() && !"FIRST_HALF".equals(dto.getHalfDaySession()) && !"SECOND_HALF".equals(dto.getHalfDaySession())) {
+            throw new PolicyViolationException("Half-day leave needs a session: FIRST_HALF or SECOND_HALF.");
+        }
 
         // Validate policy constraints
         policyValidator.validateLeaveApplication(
@@ -180,6 +184,10 @@ public class LeaveService {
         policyValidator.validateActionBeforeStartDate(leaveRequest.getStartDate(), "edit");
 
         double newTotalDays = leaveValidator.calculateTotalDays(dto.getStartDate(), dto.getEndDate(), dto.isHalfDay());
+        leaveValidator.validateNoOverlap(user.getId(), dto.getStartDate(), dto.getEndDate(), dto.isHalfDay(), dto.getHalfDaySession(), leaveId);
+        if (dto.isHalfDay() && !"FIRST_HALF".equals(dto.getHalfDaySession()) && !"SECOND_HALF".equals(dto.getHalfDaySession())) {
+            throw new PolicyViolationException("Half-day leave needs a session: FIRST_HALF or SECOND_HALF.");
+        }
 
         // Validate new policy requirements
         policyValidator.validateLeaveApplication(
