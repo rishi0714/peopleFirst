@@ -38,6 +38,14 @@ env/
 ehthumbs.db
 Thumbs.db
 
+# Node / Frontend
+node_modules/
+**/node_modules/
+dist/
+**/dist/
+.vite/
+**/.vite/
+
 # Logs
 *.log
 *.log.*
