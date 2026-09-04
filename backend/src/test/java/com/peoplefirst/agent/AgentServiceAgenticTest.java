@@ -363,5 +363,21 @@ class AgentServiceAgenticTest {
         assertFalse(response.isActionExecuted());
         assertTrue(response.getReply().contains("Managers") && response.getReply().contains("Administrators"));
     }
+
+    @Test
+    void applyLeaveOnWeekendIsDetectedAndRejectedImmediately() {
+        when(genAiClient.isConfigured()).thenReturn(false);
+        // Next Sunday date
+        LocalDate nextSunday = LocalDate.now();
+        while (nextSunday.getDayOfWeek() != java.time.DayOfWeek.SUNDAY) {
+            nextSunday = nextSunday.plusDays(1);
+        }
+
+        AgentChatResponseDto response = agentService.processMessage(
+                new AgentChatRequestDto("apply casual leave on " + nextSunday, "conv-wknd-1"));
+        assertFalse(response.isActionExecuted());
+        assertTrue(response.getReply().contains("weekend") || response.getReply().contains("Sunday"));
+        assertTrue(response.getReply().contains("Monday to Friday"));
+    }
 }
 

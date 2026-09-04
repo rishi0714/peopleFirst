@@ -822,16 +822,16 @@ public class AgentService {
             return promptForDates(draft.getLeaveType(), user);
         }
 
-        // Check Paid Leave advance notice violation
-        AgentChatResponseDto noticeViolation = checkPaidLeaveNoticeViolation(draft, user);
-        if (noticeViolation != null) {
-            return noticeViolation;
-        }
-
         // Check weekend restriction immediately when dates are known
         AgentChatResponseDto weekendViolationInDraft = checkWeekendViolation(draft, user);
         if (weekendViolationInDraft != null) {
             return weekendViolationInDraft;
+        }
+
+        // Check Paid Leave advance notice violation
+        AgentChatResponseDto noticeViolation = checkPaidLeaveNoticeViolation(draft, user);
+        if (noticeViolation != null) {
+            return noticeViolation;
         }
 
         // Check Date Overlap violation immediately when dates are known
@@ -967,10 +967,15 @@ public class AgentService {
 
         if (start.getDayOfWeek() == DayOfWeek.SATURDAY || start.getDayOfWeek() == DayOfWeek.SUNDAY ||
                 end.getDayOfWeek() == DayOfWeek.SATURDAY || end.getDayOfWeek() == DayOfWeek.SUNDAY) {
+            DayOfWeek day = start.getDayOfWeek();
+            String dayName = day.toString().charAt(0) + day.toString().substring(1).toLowerCase();
+            boolean isTomorrow = start.equals(LocalDate.now().plusDays(1));
+            String dateLabel = isTomorrow ? "Tomorrow (" + start + ") is " + dayName : start + " is " + dayName;
+
             draft.setStartDate(null);
             draft.setEndDate(null);
             userDrafts.put(user.getId(), draft);
-            String msg = "❌ **Policy Check Notice:** Leaves cannot be applied on weekends (Saturday or Sunday). Please select working days (Monday to Friday).\n\n" +
+            String msg = "❌ **Policy Check Notice:** " + dateLabel + " (weekend). Leaves cannot be applied on weekends (Saturday or Sunday). Please select working days (Monday to Friday).\n\n" +
                     "When would you like your leave to begin?";
             AgentChatResponseDto response = new AgentChatResponseDto(msg, AgentIntent.APPLY_LEAVE.name());
             response.setQuickReplies(List.of("Next Monday", "Next Week", "Check my balances", "Read company leave policies"));
@@ -1093,10 +1098,23 @@ public class AgentService {
             while (earliestValid.getDayOfWeek() == DayOfWeek.SATURDAY || earliestValid.getDayOfWeek() == DayOfWeek.SUNDAY) {
                 earliestValid = earliestValid.plusDays(1);
             }
+            LocalDate start = draft.getStartDate();
+            boolean isWeekend = start.getDayOfWeek() == DayOfWeek.SATURDAY || start.getDayOfWeek() == DayOfWeek.SUNDAY;
+            boolean isTomorrow = start.equals(LocalDate.now().plusDays(1));
+            String dayName = start.getDayOfWeek().toString().charAt(0) + start.getDayOfWeek().toString().substring(1).toLowerCase();
+
             StringBuilder sb = new StringBuilder();
-            sb.append("❌ **Policy Check Notice:** Paid Leave requires more than 2 days advance notice.\n\n")
-                    .append("💡 Would you like me to submit this Paid Leave starting on the earliest permitted date (**")
-                    .append(earliestValid).append("**)?");
+            if (isWeekend) {
+                String dateLabel = isTomorrow ? "Tomorrow (" + start + ") is " + dayName + " (weekend)" : start + " is " + dayName + " (weekend)";
+                sb.append("❌ **Policy Check Notice:** ").append(dateLabel)
+                        .append(", and Paid Leave requires more than 2 days advance notice.\n\n")
+                        .append("💡 Would you like me to submit this Paid Leave starting on the earliest permitted date (**")
+                        .append(earliestValid).append("**)?");
+            } else {
+                sb.append("❌ **Policy Check Notice:** Paid Leave requires more than 2 days advance notice.\n\n")
+                        .append("💡 Would you like me to submit this Paid Leave starting on the earliest permitted date (**")
+                        .append(earliestValid).append("**)?");
+            }
 
             PendingLeaveDraft retryDraft = new PendingLeaveDraft();
             retryDraft.setLeaveType(LeaveType.PAID);
