@@ -42,12 +42,20 @@ public class PolicyValidator {
             throw new PolicyViolationException("Leaves cannot be applied on weekends (Saturday or Sunday). Please select working days (Monday to Friday).");
         }
 
-        // SPEC.md §2: Role eligibility
-        if (!leaveType.isEligibleForUser(user.isContractor())) {
-            throw new PolicyViolationException(
-                    (user.isContractor() ? "Contractors" : "Employees") +
-                            " are not eligible for " + leaveType.getDisplayName() +
-                            ". Eligible types: Sick Leave, Paid Leave, Loss of Pay (LOP).");
+        // Role and gender eligibility
+        if (!leaveType.isEligibleForUser(user.isContractor(), user.getGender())) {
+            if (user.isContractor()) {
+                throw new PolicyViolationException(
+                        "Contractors are not eligible for " + leaveType.getDisplayName() +
+                                ". Eligible types: Sick Leave, Paid Leave, Loss of Pay (LOP).");
+            } else if (leaveType == LeaveType.MATERNITY) {
+                throw new PolicyViolationException("Maternity Leave is only available to female employees. Male employees are eligible for Paternity Leave (15 days).");
+            } else if (leaveType == LeaveType.PATERNITY) {
+                throw new PolicyViolationException("Paternity Leave is only available to male employees. Female employees are eligible for Maternity Leave (182 days).");
+            } else {
+                throw new PolicyViolationException(
+                        "Employees are not eligible for " + leaveType.getDisplayName() + ".");
+            }
         }
 
         // SPEC.md §3: Combination rules

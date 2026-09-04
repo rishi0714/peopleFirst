@@ -10,6 +10,9 @@ export const ApplyLeave = {
   render() {
     const user = Auth.getCurrentUser();
     const isContractor = Auth.isContractor();
+    const gender = user?.gender;
+    const isMale = gender === 'MALE';
+    const isFemale = gender === 'FEMALE';
 
     return `
       <div class="view-header">
@@ -35,7 +38,8 @@ export const ApplyLeave = {
                   <option value="PAID">Paid Leave (${isContractor ? '24' : '20'} days/yr)</option>
                   <option value="LOP">Loss of Pay (LOP) (${isContractor ? '30' : '180'} days/yr)</option>
                   ${!isContractor ? '<option value="WFH">Work From Home (WFH) (24 days/yr)</option>' : ''}
-                  ${!isContractor ? '<option value="MATERNITY">Maternity Leave (182 days/yr)</option>' : ''}
+                  ${!isContractor && (isFemale || (!isMale && !isFemale)) ? '<option value="MATERNITY">Maternity Leave (182 days/yr)</option>' : ''}
+                  ${!isContractor && (isMale || (!isMale && !isFemale)) ? '<option value="PATERNITY">Paternity Leave (15 days/yr)</option>' : ''}
                   ${!isContractor ? '<option value="VOLUNTEERING">Volunteering Leave (2 days/yr)</option>' : ''}
                 </select>
                 <div id="leaveTypeNotice" class="form-helper"></div>

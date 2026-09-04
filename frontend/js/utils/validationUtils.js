@@ -31,7 +31,7 @@ export const ValidationUtils = {
 
     // Contractor checks
     if (isContractor) {
-      if (['CASUAL', 'WFH', 'MATERNITY', 'VOLUNTEERING'].includes(leaveType)) {
+      if (['CASUAL', 'WFH', 'MATERNITY', 'PATERNITY', 'VOLUNTEERING'].includes(leaveType)) {
         errors.push(`Contractors are not eligible for ${leaveType}. Eligible types: Sick, Paid, LOP.`);
       }
       if (combinedWithType) {

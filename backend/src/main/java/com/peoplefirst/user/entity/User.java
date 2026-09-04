@@ -40,6 +40,10 @@ public class User {
     @Column(name = "manager_id")
     private UUID managerId;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "gender", nullable = false)
+    private Gender gender = Gender.OTHER;
+
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
 
@@ -49,6 +53,12 @@ public class User {
     public User(String username, String email, String passwordHash, String fullName,
                 Role role, boolean contractor, String department, String baseLocation,
                 UUID managerId) {
+        this(username, email, passwordHash, fullName, role, contractor, department, baseLocation, managerId, Gender.OTHER);
+    }
+
+    public User(String username, String email, String passwordHash, String fullName,
+                Role role, boolean contractor, String department, String baseLocation,
+                UUID managerId, Gender gender) {
         this.username = username;
         this.email = email;
         this.passwordHash = passwordHash;
@@ -58,6 +68,7 @@ public class User {
         this.department = department;
         this.baseLocation = baseLocation;
         this.managerId = managerId;
+        this.gender = gender != null ? gender : Gender.OTHER;
         this.createdAt = LocalDateTime.now();
     }
 
@@ -139,6 +150,14 @@ public class User {
 
     public void setManagerId(UUID managerId) {
         this.managerId = managerId;
+    }
+
+    public Gender getGender() {
+        return gender;
+    }
+
+    public void setGender(Gender gender) {
+        this.gender = gender;
     }
 
     public LocalDateTime getCreatedAt() {

@@ -44,6 +44,7 @@ class AgentServiceAgenticTest {
     private LeaveService leaveService;
     private LeaveBalanceService leaveBalanceService;
     private LeaveMapper leaveMapper;
+    private ApprovalService approvalService;
     private AgentService agentService;
     private User employee;
 
@@ -57,7 +58,7 @@ class AgentServiceAgenticTest {
         WellbeingService wellbeingService = Mockito.mock(WellbeingService.class);
         leaveMapper = Mockito.mock(LeaveMapper.class);
         genAiClient = Mockito.mock(GenAiClient.class);
-        ApprovalService approvalService = Mockito.mock(ApprovalService.class);
+        approvalService = Mockito.mock(ApprovalService.class);
         TicketService ticketService = Mockito.mock(TicketService.class);
         UserService userService = Mockito.mock(UserService.class);
 
@@ -261,5 +262,69 @@ class AgentServiceAgenticTest {
         AgentChatResponseDto response = agentService.processMessage(
                 new AgentChatRequestDto(message, "conv-limit-b"));
         assertTrue(response.getReply().contains("Kura"));
+    }
+
+    @Test
+    void managerApproveWithTypoAndEmployeeNameResolvesAndApproves() {
+        when(genAiClient.isConfigured()).thenReturn(false);
+        User manager = new User("mgr1", "mgr1@test.com", "hash", "Vikram Manager",
+                Role.MANAGER, false, "Eng", "Bangalore", null, com.peoplefirst.user.entity.Gender.MALE);
+        manager.setId(UUID.randomUUID());
+        when(currentUserProvider.getCurrentUser()).thenReturn(manager);
+
+        LeaveResponseDto pendingRohan = Mockito.mock(LeaveResponseDto.class);
+        UUID rohanLeaveId = UUID.randomUUID();
+        when(pendingRohan.getId()).thenReturn(rohanLeaveId);
+        when(pendingRohan.getEmployeeName()).thenReturn("Rohan Verma");
+        when(pendingRohan.getLeaveTypeDisplayName()).thenReturn("Sick Leave");
+        when(pendingRohan.getStartDate()).thenReturn(LocalDate.now().plusDays(2));
+        when(pendingRohan.getEndDate()).thenReturn(LocalDate.now().plusDays(3));
+
+        when(approvalService.getPendingApprovals(eq(manager))).thenReturn(List.of(pendingRohan));
+
+        LeaveResponseDto approved = Mockito.mock(LeaveResponseDto.class);
+        when(approved.getId()).thenReturn(rohanLeaveId);
+        when(approved.getEmployeeName()).thenReturn("Rohan Verma");
+        when(approved.getLeaveTypeDisplayName()).thenReturn("Sick Leave");
+        when(approved.getStartDate()).thenReturn(LocalDate.now().plusDays(2));
+        when(approved.getEndDate()).thenReturn(LocalDate.now().plusDays(3));
+        when(approvalService.approveLeave(eq(rohanLeaveId), any(), eq(manager))).thenReturn(approved);
+
+        // Typo: "aprove rohan"
+        AgentChatResponseDto response = agentService.processMessage(
+                new AgentChatRequestDto("aprove rohan", "conv-mgr-1"));
+        assertTrue(response.isActionExecuted());
+        assertEquals("APPROVE_LEAVE", response.getActionName());
+        assertTrue(response.getReply().contains("Rohan Verma"));
+        assertTrue(response.getReply().contains("APPROVED"));
+    }
+
+    @Test
+    void managerRejectWithTypoAndSendBackWithTypo() {
+        when(genAiClient.isConfigured()).thenReturn(false);
+        User manager = new User("mgr1", "mgr1@test.com", "hash", "Vikram Manager",
+                Role.MANAGER, false, "Eng", "Bangalore", null, com.peoplefirst.user.entity.Gender.MALE);
+        manager.setId(UUID.randomUUID());
+        when(currentUserProvider.getCurrentUser()).thenReturn(manager);
+
+        LeaveResponseDto pending = Mockito.mock(LeaveResponseDto.class);
+        UUID leaveId = UUID.randomUUID();
+        when(pending.getId()).thenReturn(leaveId);
+        when(pending.getEmployeeName()).thenReturn("Ananya Gupta");
+        when(pending.getLeaveTypeDisplayName()).thenReturn("Casual Leave");
+        when(approvalService.getPendingApprovals(eq(manager))).thenReturn(List.of(pending));
+
+        LeaveResponseDto rejected = Mockito.mock(LeaveResponseDto.class);
+        when(rejected.getId()).thenReturn(leaveId);
+        when(rejected.getEmployeeName()).thenReturn("Ananya Gupta");
+        when(rejected.getLeaveTypeDisplayName()).thenReturn("Casual Leave");
+        when(approvalService.rejectLeave(eq(leaveId), any(), eq(manager))).thenReturn(rejected);
+
+        // Typo: "rejct ananya because overlap"
+        AgentChatResponseDto response = agentService.processMessage(
+                new AgentChatRequestDto("rejct ananya because overlap", "conv-mgr-2"));
+        assertTrue(response.isActionExecuted());
+        assertEquals("REJECT_LEAVE", response.getActionName());
+        assertTrue(response.getReply().contains("REJECTED"));
     }
 }

@@ -52,11 +52,16 @@ public class GenAiClient {
     public record IntentSlots(String intent, Map<String, String> slots) {
     }
 
+    @org.springframework.beans.factory.annotation.Autowired
     public GenAiClient(ObjectMapper objectMapper) {
-        this.objectMapper = objectMapper;
-        this.httpClient = HttpClient.newBuilder()
+        this(objectMapper, HttpClient.newBuilder()
                 .connectTimeout(Duration.ofSeconds(6))
-                .build();
+                .build());
+    }
+
+    public GenAiClient(ObjectMapper objectMapper, HttpClient httpClient) {
+        this.objectMapper = objectMapper;
+        this.httpClient = httpClient;
     }
 
     public boolean isConfigured() {

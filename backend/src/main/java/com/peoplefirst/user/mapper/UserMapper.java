@@ -18,6 +18,7 @@ public class UserMapper {
                 user.getFullName(),
                 user.getRole(),
                 user.isContractor(),
+                user.getGender(),
                 user.getDepartment(),
                 user.getBaseLocation(),
                 user.getManagerId(),

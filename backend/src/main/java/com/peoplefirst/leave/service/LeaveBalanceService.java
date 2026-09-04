@@ -31,8 +31,8 @@ public class LeaveBalanceService {
 
         List<LeaveBalance> createdList = new ArrayList<>();
         for (LeaveType type : LeaveType.values()) {
-            if (type.isEligibleForUser(user.isContractor())) {
-                double quota = type.getDefaultQuotaForUser(user.isContractor());
+            if (type.isEligibleForUser(user.isContractor(), user.getGender())) {
+                double quota = type.getDefaultQuotaForUser(user.isContractor(), user.getGender());
                 LeaveBalance balance = new LeaveBalance(user.getId(), type, quota, year);
                 createdList.add(leaveBalanceRepository.save(balance));
             }
@@ -54,7 +54,7 @@ public class LeaveBalanceService {
     public LeaveBalance getOrCreateUserBalance(User user, LeaveType leaveType, int year) {
         return leaveBalanceRepository.findByUserIdAndLeaveTypeAndYear(user.getId(), leaveType, year)
                 .orElseGet(() -> {
-                    double quota = leaveType.getDefaultQuotaForUser(user.isContractor());
+                    double quota = leaveType.getDefaultQuotaForUser(user.isContractor(), user.getGender());
                     LeaveBalance balance = new LeaveBalance(user.getId(), leaveType, quota, year);
                     return leaveBalanceRepository.save(balance);
                 });

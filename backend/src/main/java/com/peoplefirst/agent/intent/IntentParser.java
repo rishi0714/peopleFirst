@@ -38,6 +38,21 @@ public class IntentParser {
     private static final List<String> GREETING_KEYWORDS = Arrays.asList(
             "hi", "hello", "hey", "hola", "namaste", "help", "start"
     );
+    private static final List<String> APPROVE_KEYWORDS = Arrays.asList(
+            "approve", "aprove", "approv", "aprv", "aprov", "accept", "allow", "grant"
+    );
+    private static final List<String> REJECT_KEYWORDS = Arrays.asList(
+            "reject", "rejct", "rejeckt", "decline", "deny", "disallow"
+    );
+    private static final List<String> SEND_BACK_KEYWORDS = Arrays.asList(
+            "send back", "send-back", "sendback", "return", "revert", "snd bak"
+    );
+    private static final List<String> PENDING_APPROVAL_KEYWORDS = Arrays.asList(
+            "pending", "pendng", "approvals", "approvl", "approval queue", "requests to approve"
+    );
+    private static final List<String> TEAM_BALANCE_KEYWORDS = Arrays.asList(
+            "team balance", "team balances", "team leave", "team's balance", "reportees balance", "reportee balance"
+    );
 
     // --- Leave type names for fuzzy matching ---
     private static final List<String> CASUAL_NAMES = Arrays.asList("casual");
@@ -46,6 +61,7 @@ public class IntentParser {
     private static final List<String> LOP_NAMES = Arrays.asList("lop", "unpaid");
     private static final List<String> WFH_NAMES = Arrays.asList("wfh");
     private static final List<String> MATERNITY_NAMES = Arrays.asList("maternity");
+    private static final List<String> PATERNITY_NAMES = Arrays.asList("paternity", "patrnity", "father", "paternal");
     private static final List<String> VOLUNTEERING_NAMES = Arrays.asList("volunteering", "volunteer");
 
     /**
@@ -77,28 +93,35 @@ public class IntentParser {
         }
 
         // 2. Manager / Supervisor Actions
-        if (lower.startsWith("approve") || lower.contains("approve leave") || lower.contains("approve request") ||
-                lower.contains("approve this")) {
+        if (lower.startsWith("approve") || lower.startsWith("aprove") || lower.startsWith("approv") || lower.startsWith("aprv") ||
+                lower.contains("approve leave") || lower.contains("aprove leave") || lower.contains("approve request") ||
+                lower.contains("aprove request") || lower.contains("approve this") || lower.contains("aprove this") ||
+                lower.equals("approve") || lower.equals("aprove") || lower.equals("aprv") || lower.equals("approv")) {
             return AgentIntent.APPROVE_LEAVE;
         }
 
-        if (lower.startsWith("reject") || lower.contains("reject leave") || lower.contains("reject request") ||
-                lower.contains("decline leave")) {
+        if (lower.startsWith("reject") || lower.startsWith("rejct") || lower.startsWith("rejeckt") ||
+                lower.contains("reject leave") || lower.contains("rejct leave") || lower.contains("reject request") ||
+                lower.contains("decline leave") || lower.contains("decline request") ||
+                lower.equals("reject") || lower.equals("rejct")) {
             return AgentIntent.REJECT_LEAVE;
         }
 
-        if (lower.startsWith("send back") || lower.contains("send back") || lower.contains("return leave") ||
-                lower.contains("return request") || lower.contains("send-back")) {
+        if (lower.startsWith("send back") || lower.startsWith("send-back") || lower.startsWith("sendback") ||
+                lower.startsWith("snd bak") || lower.startsWith("snd back") ||
+                lower.contains("send back") || lower.contains("send-back") || lower.contains("sendback") || lower.contains("snd bak") ||
+                lower.contains("return leave") || lower.contains("return request") || lower.contains("revert leave")) {
             return AgentIntent.SEND_BACK_LEAVE;
         }
 
-        if (lower.contains("pending approval") || lower.contains("requests to approve") ||
-                lower.contains("team requests") || lower.contains("approval queue") ||
-                lower.equals("approvals") || lower.contains("pending approvals") || lower.contains("approvals queue")) {
+        if (lower.contains("pending approval") || lower.contains("pendng approval") || lower.contains("pending approvals") ||
+                lower.contains("requests to approve") || lower.contains("team requests") || lower.contains("approval queue") ||
+                lower.equals("approvals") || lower.equals("approvl") || lower.equals("pending") || lower.equals("pendng") ||
+                lower.contains("pending approvals") || lower.contains("approvals queue")) {
             return AgentIntent.VIEW_PENDING_APPROVALS;
         }
 
-        if (lower.contains("team balance") || lower.contains("reportees balance") ||
+        if (lower.contains("team balance") || lower.contains("team balances") || lower.contains("reportees balance") ||
                 lower.contains("reportee balance") || lower.contains("my team's balance") ||
                 lower.contains("team's leave") || lower.contains("team leave balance")) {
             return AgentIntent.CHECK_TEAM_BALANCES;
@@ -298,6 +321,23 @@ public class IntentParser {
             return AgentIntent.APPLY_LEAVE;
         }
 
+        // Check fuzzy manager actions
+        if (hasFuzzyKeyword(lower, APPROVE_KEYWORDS, 2)) {
+            return AgentIntent.APPROVE_LEAVE;
+        }
+        if (hasFuzzyKeyword(lower, REJECT_KEYWORDS, 2)) {
+            return AgentIntent.REJECT_LEAVE;
+        }
+        if (hasFuzzyKeyword(lower, SEND_BACK_KEYWORDS, 2)) {
+            return AgentIntent.SEND_BACK_LEAVE;
+        }
+        if (hasFuzzyKeyword(lower, PENDING_APPROVAL_KEYWORDS, 2)) {
+            return AgentIntent.VIEW_PENDING_APPROVALS;
+        }
+        if (hasFuzzyKeyword(lower, TEAM_BALANCE_KEYWORDS, 2)) {
+            return AgentIntent.CHECK_TEAM_BALANCES;
+        }
+
         // Fuzzy greeting
         if (tokens.length <= 2 && hasFuzzyKeyword(lower, GREETING_KEYWORDS, 1)) {
             return AgentIntent.GREETING;
@@ -387,6 +427,7 @@ public class IntentParser {
         if (lower.contains("lop") || lower.contains("loss of pay") || lower.contains("lass of pay") || lower.contains("unpaid")) return LeaveType.LOP;
         if (lower.contains("wfh") || lower.contains("work from home") || lower.contains("ghar se kaam") || lower.contains("ghar se")) return LeaveType.WFH;
         if (lower.contains("maternity")) return LeaveType.MATERNITY;
+        if (lower.contains("paternity")) return LeaveType.PATERNITY;
         if (lower.contains("volunteering") || lower.contains("volunteer")) return LeaveType.VOLUNTEERING;
 
         return null;
@@ -416,6 +457,7 @@ public class IntentParser {
             if (FuzzyMatcher.findBestMatch(clean, LOP_NAMES, 1).isPresent()) return LeaveType.LOP;
             if (FuzzyMatcher.findBestMatch(clean, WFH_NAMES, 1).isPresent()) return LeaveType.WFH;
             if (FuzzyMatcher.findBestMatch(clean, MATERNITY_NAMES, 2).isPresent()) return LeaveType.MATERNITY;
+            if (FuzzyMatcher.findBestMatch(clean, PATERNITY_NAMES, 2).isPresent()) return LeaveType.PATERNITY;
             if (FuzzyMatcher.findBestMatch(clean, VOLUNTEERING_NAMES, 3).isPresent()) return LeaveType.VOLUNTEERING;
         }
 

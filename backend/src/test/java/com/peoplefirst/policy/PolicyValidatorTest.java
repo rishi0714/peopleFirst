@@ -198,4 +198,46 @@ class PolicyValidatorTest {
                 policyValidator.validateLeaveApplication(employee, LeaveType.PAID, null, sunday, monday, 2.0, false, null, LocalDate.of(2026, 9, 7)));
         assertTrue(ex3.getMessage().contains("Leaves cannot be applied on weekends"));
     }
+
+    @Test
+    @DisplayName("Gender Validation: Male employees cannot apply Maternity (must use Paternity)")
+    void testMaleEmployeeMaternityRejectedAndPaternityAllowed() {
+        User maleEmp = new User("maleEmp", "male@test.com", "hash", "Male Employee",
+                Role.EMPLOYEE, false, "Eng", "Bangalore", UUID.randomUUID(), com.peoplefirst.user.entity.Gender.MALE);
+        maleEmp.setId(UUID.randomUUID());
+
+        LocalDate appliedDate = LocalDate.of(2026, 9, 7);
+        LocalDate start = LocalDate.of(2026, 9, 8);
+        LocalDate end = LocalDate.of(2026, 9, 9);
+
+        // Male applying Maternity -> rejected
+        PolicyViolationException ex = assertThrows(PolicyViolationException.class, () ->
+                policyValidator.validateLeaveApplication(maleEmp, LeaveType.MATERNITY, null, start, end, 2.0, false, null, appliedDate));
+        assertTrue(ex.getMessage().contains("Maternity Leave is only available to female employees"));
+
+        // Male applying Paternity -> allowed
+        assertDoesNotThrow(() ->
+                policyValidator.validateLeaveApplication(maleEmp, LeaveType.PATERNITY, null, start, end, 2.0, false, null, appliedDate));
+    }
+
+    @Test
+    @DisplayName("Gender Validation: Female employees cannot apply Paternity (must use Maternity)")
+    void testFemaleEmployeePaternityRejectedAndMaternityAllowed() {
+        User femaleEmp = new User("femaleEmp", "female@test.com", "hash", "Female Employee",
+                Role.EMPLOYEE, false, "HR", "Bangalore", UUID.randomUUID(), com.peoplefirst.user.entity.Gender.FEMALE);
+        femaleEmp.setId(UUID.randomUUID());
+
+        LocalDate appliedDate = LocalDate.of(2026, 9, 7);
+        LocalDate start = LocalDate.of(2026, 9, 8);
+        LocalDate end = LocalDate.of(2026, 9, 9);
+
+        // Female applying Paternity -> rejected
+        PolicyViolationException ex = assertThrows(PolicyViolationException.class, () ->
+                policyValidator.validateLeaveApplication(femaleEmp, LeaveType.PATERNITY, null, start, end, 2.0, false, null, appliedDate));
+        assertTrue(ex.getMessage().contains("Paternity Leave is only available to male employees"));
+
+        // Female applying Maternity -> allowed
+        assertDoesNotThrow(() ->
+                policyValidator.validateLeaveApplication(femaleEmp, LeaveType.MATERNITY, null, start, end, 2.0, false, null, appliedDate));
+    }
 }

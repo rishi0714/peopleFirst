@@ -1,6 +1,7 @@
 package com.peoplefirst.user.service;
 
 import com.peoplefirst.leave.service.LeaveBalanceService;
+import com.peoplefirst.user.entity.Gender;
 import com.peoplefirst.user.entity.Role;
 import com.peoplefirst.user.entity.User;
 import com.peoplefirst.user.repository.UserRepository;
@@ -36,7 +37,7 @@ public class DataInitializer implements CommandLineRunner {
         String encodedPassword = passwordEncoder.encode("password123");
         int currentYear = LocalDate.now().getYear();
 
-        // 1. Admin 1
+        // 1. Admin 1 (Female)
         User admin1 = new User(
                 "admin1",
                 "admin1@peoplefirst.internal",
@@ -46,12 +47,13 @@ public class DataInitializer implements CommandLineRunner {
                 false,
                 "Executive",
                 "Bangalore",
-                null
+                null,
+                Gender.FEMALE
         );
         admin1 = userRepository.save(admin1);
         leaveBalanceService.initializeUserBalancesIfAbsent(admin1, currentYear);
 
-        // 2. Admin 2
+        // 2. Admin 2 (Male)
         User admin2 = new User(
                 "admin2",
                 "admin2@peoplefirst.internal",
@@ -61,12 +63,13 @@ public class DataInitializer implements CommandLineRunner {
                 false,
                 "Executive",
                 "Bangalore",
-                null
+                null,
+                Gender.MALE
         );
         admin2 = userRepository.save(admin2);
         leaveBalanceService.initializeUserBalancesIfAbsent(admin2, currentYear);
 
-        // 3. Manager 1 (Engineering - reports to Admin 1)
+        // 3. Manager 1 (Engineering - reports to Admin 1) (Male)
         User manager1 = new User(
                 "manager1",
                 "manager1@peoplefirst.internal",
@@ -76,12 +79,13 @@ public class DataInitializer implements CommandLineRunner {
                 false,
                 "Engineering",
                 "Bangalore",
-                admin1.getId()
+                admin1.getId(),
+                Gender.MALE
         );
         manager1 = userRepository.save(manager1);
         leaveBalanceService.initializeUserBalancesIfAbsent(manager1, currentYear);
 
-        // 4. Employee 1 (Engineering - reports to Manager 1)
+        // 4. Employee 1 (Engineering - reports to Manager 1) (Male)
         User employee1 = new User(
                 "employee1",
                 "employee1@peoplefirst.internal",
@@ -91,12 +95,13 @@ public class DataInitializer implements CommandLineRunner {
                 false,
                 "Engineering",
                 "Bangalore",
-                manager1.getId()
+                manager1.getId(),
+                Gender.MALE
         );
         employee1 = userRepository.save(employee1);
         leaveBalanceService.initializeUserBalancesIfAbsent(employee1, currentYear);
 
-        // 5. Contractor 1 (Engineering - reports to Manager 1)
+        // 5. Contractor 1 (Engineering - reports to Manager 1) (Female)
         User contractor1 = new User(
                 "contractor1",
                 "contractor1@peoplefirst.internal",
@@ -106,12 +111,13 @@ public class DataInitializer implements CommandLineRunner {
                 true, // isContractor = true
                 "Engineering",
                 "Bangalore",
-                manager1.getId()
+                manager1.getId(),
+                Gender.FEMALE
         );
         contractor1 = userRepository.save(contractor1);
         leaveBalanceService.initializeUserBalancesIfAbsent(contractor1, currentYear);
 
-        // 6. Manager 2 (Product - reports to Admin 1)
+        // 6. Manager 2 (Product - reports to Admin 1) (Female)
         User manager2 = new User(
                 "manager2",
                 "manager2@peoplefirst.internal",
@@ -121,12 +127,13 @@ public class DataInitializer implements CommandLineRunner {
                 false,
                 "Product",
                 "Hyderabad",
-                admin1.getId()
+                admin1.getId(),
+                Gender.FEMALE
         );
         manager2 = userRepository.save(manager2);
         leaveBalanceService.initializeUserBalancesIfAbsent(manager2, currentYear);
 
-        // 7. Employee 2 (Product - reports to Manager 2)
+        // 7. Employee 2 (Product - reports to Manager 2) (Female)
         User employee2 = new User(
                 "employee2",
                 "employee2@peoplefirst.internal",
@@ -136,7 +143,8 @@ public class DataInitializer implements CommandLineRunner {
                 false,
                 "Product",
                 "Hyderabad",
-                manager2.getId()
+                manager2.getId(),
+                Gender.FEMALE
         );
         employee2 = userRepository.save(employee2);
         leaveBalanceService.initializeUserBalancesIfAbsent(employee2, currentYear);

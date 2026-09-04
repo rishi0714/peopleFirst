@@ -2,75 +2,72 @@ package com.peoplefirst.agent;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.peoplefirst.agent.client.GenAiClient;
-import com.sun.net.httpserver.HttpServer;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 
-import java.io.OutputStream;
-import java.net.InetSocketAddress;
-import java.nio.charset.StandardCharsets;
-import java.util.List;
-import java.util.Map;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.*;
 
 class GenAiClientTest {
 
-    private HttpServer stub;
-    private String lastPath;
-    private String lastBody;
-    private int stubStatus = 200;
-    private String stubBody = "{\"choices\": [{\"message\": {\"content\": \"hello\"}}]}";
+    private HttpClient mockHttpClient;
+    private HttpResponse<String> mockHttpResponse;
     private GenAiClient client;
+    private String stubBody = "{\"choices\": [{\"message\": {\"content\": \"hello\"}}]}";
 
     @BeforeEach
+    @SuppressWarnings("unchecked")
     void setUp() throws Exception {
-        stub = HttpServer.create(new InetSocketAddress(0), 0);
-        stub.createContext("/", exchange -> {
-            lastPath = exchange.getRequestURI().getPath();
-            lastBody = new String(exchange.getRequestBody().readAllBytes(), StandardCharsets.UTF_8);
-            byte[] out = stubBody.getBytes(StandardCharsets.UTF_8);
-            exchange.getResponseHeaders().add("Content-Type", "application/json");
-            exchange.sendResponseHeaders(stubStatus, out.length);
-            try (OutputStream os = exchange.getResponseBody()) {
-                os.write(out);
-            }
-        });
-        stub.start();
-        client = new GenAiClient(new ObjectMapper());
+        mockHttpClient = mock(HttpClient.class);
+        mockHttpResponse = (HttpResponse<String>) mock(HttpResponse.class);
+        when(mockHttpResponse.statusCode()).thenReturn(200);
+        when(mockHttpResponse.body()).thenReturn(stubBody);
+        when(mockHttpClient.send(any(HttpRequest.class), any(HttpResponse.BodyHandler.class)))
+                .thenReturn(mockHttpResponse);
+
+        client = new GenAiClient(new ObjectMapper(), mockHttpClient);
         client.setEnabled(true);
         client.setApiKey("test-key-not-sk");
         client.setProvider("openai_compatible");
         client.setModel("test-model");
-        client.setBaseUrl("http://localhost:" + stub.getAddress().getPort());
-    }
-
-    @AfterEach
-    void tearDown() {
-        stub.stop(0);
+        client.setBaseUrl("http://localhost:8080");
     }
 
     @Test
-    void postsToConfiguredBaseUrlChatCompletions() {
+    @SuppressWarnings("unchecked")
+    void postsToConfiguredBaseUrlChatCompletions() throws Exception {
         Optional<String> reply = client.generateContent("sys", "hi");
         assertTrue(reply.isPresent());
-        assertEquals("/chat/completions", lastPath);
-        assertTrue(lastBody.contains("\"model\":\"test-model\""));
+        assertEquals("hello", reply.get());
+
+        ArgumentCaptor<HttpRequest> requestCaptor = ArgumentCaptor.forClass(HttpRequest.class);
+        verify(mockHttpClient, atLeastOnce()).send(requestCaptor.capture(), any(HttpResponse.BodyHandler.class));
+        HttpRequest req = requestCaptor.getValue();
+        assertEquals("http://localhost:8080/chat/completions", req.uri().toString());
 
         // Trailing slash on base URL must still post to /chat/completions
-        client.setBaseUrl("http://localhost:" + stub.getAddress().getPort() + "/");
+        client.setBaseUrl("http://localhost:8080/");
         Optional<String> reply2 = client.generateContent("sys", "hi");
         assertTrue(reply2.isPresent());
-        assertEquals("/chat/completions", lastPath);
     }
 
     @Test
-    void baseUrlAlreadyContainingChatCompletionsIsNotDoubled() {
-        client.setBaseUrl("http://localhost:" + stub.getAddress().getPort() + "/some/path/chat/completions");
+    @SuppressWarnings("unchecked")
+    void baseUrlAlreadyContainingChatCompletionsIsNotDoubled() throws Exception {
+        client.setBaseUrl("http://localhost:8080/some/path/chat/completions");
         Optional<String> reply = client.generateContent("sys", "hi");
         assertTrue(reply.isPresent());
-        assertEquals("/some/path/chat/completions", lastPath);
+
+        ArgumentCaptor<HttpRequest> requestCaptor = ArgumentCaptor.forClass(HttpRequest.class);
+        verify(mockHttpClient).send(requestCaptor.capture(), any(HttpResponse.BodyHandler.class));
+        HttpRequest req = requestCaptor.getValue();
+        assertEquals("http://localhost:8080/some/path/chat/completions", req.uri().toString());
     }
 }

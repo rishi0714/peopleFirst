@@ -563,10 +563,16 @@ public class AgentService {
         if (user.isContractor()) {
             sb.append("- Contractors have AGENT-ONLY access (no web portal access).\n");
             sb.append("- Contractors are eligible ONLY for: Sick Leave (16 days), Paid Leave (24 days), LOP (30 days).\n");
-            sb.append("- Contractors are NOT eligible for Casual Leave, WFH, Maternity, or Volunteering.\n");
+            sb.append("- Contractors are NOT eligible for Casual Leave, WFH, Maternity, Paternity, or Volunteering.\n");
             sb.append("- Contractors CANNOT combine leave types (0 combination rights).\n");
         } else {
-            sb.append("- Permanent employees get: Casual (12), Sick (16), Paid (20), LOP (180), WFH (24), Maternity (182), Volunteering (2).\n");
+            if (user.getGender() == com.peoplefirst.user.entity.Gender.MALE) {
+                sb.append("- Permanent male employees get: Casual (12), Sick (16), Paid (20), LOP (180), WFH (24), Paternity (15), Volunteering (2). Paternity leave is 15 days; Maternity is not applicable to male employees.\n");
+            } else if (user.getGender() == com.peoplefirst.user.entity.Gender.FEMALE) {
+                sb.append("- Permanent female employees get: Casual (12), Sick (16), Paid (20), LOP (180), WFH (24), Maternity (182), Volunteering (2). Maternity leave is 182 days; Paternity is not applicable to female employees.\n");
+            } else {
+                sb.append("- Permanent employees get: Casual (12), Sick (16), Paid (20), LOP (180), WFH (24), Parental Leave (15-182), Volunteering (2).\n");
+            }
             sb.append("- Casual Leave may ONLY be combined with WFH. Other combinations are strictly prohibited.\n");
         }
 
@@ -2075,20 +2081,62 @@ public class AgentService {
                 return leaveService.getLeaveById(uuid);
             } catch (Exception ignored) {}
         }
+
+        List<LeaveResponseDto> pending = approvalService.getPendingApprovals(user);
+        if (pending.isEmpty()) {
+            return null;
+        }
+
         // Check 8-char hex prefix
         Matcher m8 = Pattern.compile("([a-f0-9]{8})", Pattern.CASE_INSENSITIVE).matcher(message);
         if (m8.find()) {
             String prefix = m8.group(1).toLowerCase();
-            List<LeaveResponseDto> all = approvalService.getPendingApprovals(user);
-            for (LeaveResponseDto l : all) {
+            for (LeaveResponseDto l : pending) {
                 if (l.getId().toString().toLowerCase().startsWith(prefix)) {
                     return l;
                 }
             }
         }
+
+        String lowerMsg = message.toLowerCase();
+
+        // Check pending requests by employee name (exact token or fuzzy match)
+        for (LeaveResponseDto l : pending) {
+            if (l.getEmployeeName() != null) {
+                String empLower = l.getEmployeeName().toLowerCase();
+                String[] nameParts = empLower.split("\\s+");
+                for (String part : nameParts) {
+                    if (part.length() >= 3) {
+                        if (lowerMsg.contains(part) || com.peoplefirst.agent.intent.FuzzyMatcher.fuzzyContains(lowerMsg, part, 1)) {
+                            return l;
+                        }
+                    }
+                }
+            }
+        }
+
+        // Check pending requests by leave type (e.g. "approve sick leave", "reject casual")
+        LeaveType requestedType = intentParser.extractLeaveTypeFuzzy(message);
+        if (requestedType != null) {
+            for (LeaveResponseDto l : pending) {
+                if (l.getLeaveType() == requestedType) {
+                    return l;
+                }
+            }
+        }
+
+        // Check pending requests by dates
+        LocalDate[] dates = intentParser.extractDates(message);
+        if (dates[0] != null) {
+            for (LeaveResponseDto l : pending) {
+                if (dates[0].equals(l.getStartDate()) || (dates[1] != null && dates[1].equals(l.getEndDate()))) {
+                    return l;
+                }
+            }
+        }
+
         // Fallback: earliest pending request
-        List<LeaveResponseDto> pending = approvalService.getPendingApprovals(user);
-        return pending.isEmpty() ? null : pending.get(0);
+        return pending.get(0);
     }
 
     private String extractActionComment(String message, String defaultComment) {

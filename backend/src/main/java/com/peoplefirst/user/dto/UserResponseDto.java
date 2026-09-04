@@ -1,5 +1,6 @@
 package com.peoplefirst.user.dto;
 
+import com.peoplefirst.user.entity.Gender;
 import com.peoplefirst.user.entity.Role;
 import java.time.LocalDateTime;
 import java.util.UUID;
@@ -12,6 +13,7 @@ public class UserResponseDto {
     private String fullName;
     private Role role;
     private boolean contractor;
+    private Gender gender;
     private String department;
     private String baseLocation;
     private UUID managerId;
@@ -21,7 +23,7 @@ public class UserResponseDto {
     }
 
     public UserResponseDto(UUID id, String username, String email, String fullName, Role role,
-                           boolean contractor, String department, String baseLocation,
+                           boolean contractor, Gender gender, String department, String baseLocation,
                            UUID managerId, LocalDateTime createdAt) {
         this.id = id;
         this.username = username;
@@ -29,6 +31,7 @@ public class UserResponseDto {
         this.fullName = fullName;
         this.role = role;
         this.contractor = contractor;
+        this.gender = gender;
         this.department = department;
         this.baseLocation = baseLocation;
         this.managerId = managerId;
@@ -81,6 +84,14 @@ public class UserResponseDto {
 
     public void setContractor(boolean contractor) {
         this.contractor = contractor;
+    }
+
+    public Gender getGender() {
+        return gender;
+    }
+
+    public void setGender(Gender gender) {
+        this.gender = gender;
     }
 
     public String getDepartment() {
