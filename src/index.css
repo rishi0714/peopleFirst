@@ -1,0 +1,81 @@
+@import "tailwindcss";
+
+/*
+ * Brand palette: "Ivory & Terracotta" (matches the reference screenshot's
+ * cream background, brick-red CTA buttons, and dark ink text/borders). The
+ * app's components are written against Tailwind's stock `indigo` (brand)
+ * and `slate` (neutral) utility names, so we re-point those two scales at
+ * our palette here rather than renaming every `bg-indigo-*`/`text-slate-*`
+ * class across the codebase. `amber`/`emerald`/`rose` keep their default
+ * Tailwind values for status badges.
+ */
+@theme {
+  --color-indigo-50: #fbeee7;
+  --color-indigo-100: #f4d6c4;
+  --color-indigo-200: #e8ac8e;
+  --color-indigo-300: #d9835f;
+  --color-indigo-400: #c8623e;
+  --color-indigo-500: #b54e2c;
+  --color-indigo-600: #a13d1f;
+  --color-indigo-700: #7f3018;
+  --color-indigo-800: #5f2412;
+  --color-indigo-900: #3f180c;
+
+  --color-slate-50: #f5f0e4;
+  --color-slate-100: #ece3cd;
+  --color-slate-200: #d8cba4;
+  --color-slate-300: #bfae7c;
+  --color-slate-400: #97845a;
+  --color-slate-500: #736345;
+  --color-slate-600: #514432;
+  --color-slate-700: #3a3024;
+  --color-slate-800: #241d15;
+  --color-slate-900: #16110c;
+
+  --color-primary-50: var(--color-indigo-50);
+  --color-primary-100: var(--color-indigo-100);
+  --color-primary-200: var(--color-indigo-200);
+  --color-primary-500: var(--color-indigo-500);
+  --color-primary-600: var(--color-indigo-600);
+  --color-primary-700: var(--color-indigo-700);
+  --color-primary-900: var(--color-indigo-900);
+
+  --color-accent-500: #b45309;
+  --color-accent-600: #92400e;
+
+  --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, sans-serif;
+
+  --shadow-card: 0 1px 2px 0 rgb(22 17 12 / 0.04), 0 1px 3px 0 rgb(22 17 12 / 0.06);
+  --shadow-raised: 0 4px 6px -2px rgb(22 17 12 / 0.05), 0 10px 15px -3px rgb(22 17 12 / 0.08);
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  @apply bg-slate-50 text-slate-800 antialiased;
+  font-family: var(--font-sans);
+  font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+}
+
+h1,
+h2,
+h3,
+h4 {
+  letter-spacing: -0.01em;
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-thumb {
+  background-color: #d8cba4;
+  border-radius: 999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background-color: #bfae7c;
+}
