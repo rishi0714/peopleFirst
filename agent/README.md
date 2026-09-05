@@ -9,7 +9,7 @@ Kura is the dedicated leave management assistant and wellbeing concierge for the
 
 ## Quick Start
 
-1. Ensure the backend is running on `http://localhost:8080`.
+1. Ensure the backend is running on `http://localhost:8081`.
 2. Run the agent script using standard Python 3:
 
 ```bash

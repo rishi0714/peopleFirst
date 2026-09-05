@@ -161,8 +161,8 @@ mvn spring-boot:run -Dspring-boot.run.profiles=postgres
 
 ### 2. Access Swagger / OpenAPI Documentation
 Once started, visit:
-- **Swagger UI**: [http://localhost:8080/swagger-ui.html](http://localhost:8080/swagger-ui.html)
-- **OpenAPI JSON**: [http://localhost:8080/v3/api-docs](http://localhost:8080/v3/api-docs)
+- **Swagger UI**: [http://localhost:8081/swagger-ui.html](http://localhost:8081/swagger-ui.html)
+- **OpenAPI JSON**: [http://localhost:8081/v3/api-docs](http://localhost:8081/v3/api-docs)
 
 ### 3. Launch the Frontend
 The frontend is located in `frontend/`. Since it uses modern ES modules, serve it using any standard HTTP server:

@@ -10,7 +10,7 @@ import json
 import urllib.request
 import urllib.error
 
-DEFAULT_BACKEND_URL = "http://localhost:8080"
+DEFAULT_BACKEND_URL = "http://localhost:8081"
 
 class KuraAgentClient:
     def __init__(self, base_url=DEFAULT_BACKEND_URL):
