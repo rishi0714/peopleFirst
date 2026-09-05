@@ -801,6 +801,14 @@ public class AgentService {
             draft.setRefinedReason(intelligentlyRefineReason(draft.getLeaveType(), rawReason, user));
         }
 
+        // If dates are known, check date overlap conflicts IMMEDIATELY!
+        if (draft.getStartDate() != null) {
+            AgentChatResponseDto overlapViolationInDraft = checkDateOverlapViolation(draft, user);
+            if (overlapViolationInDraft != null) {
+                return overlapViolationInDraft;
+            }
+        }
+
         // If draft still missing leave type
         if (draft.getLeaveType() == null) {
             return promptForLeaveType(user);
@@ -822,22 +830,16 @@ public class AgentService {
             return promptForDates(draft.getLeaveType(), user);
         }
 
-        // Check weekend restriction immediately when dates are known
-        AgentChatResponseDto weekendViolationInDraft = checkWeekendViolation(draft, user);
-        if (weekendViolationInDraft != null) {
-            return weekendViolationInDraft;
-        }
-
         // Check Paid Leave advance notice violation
         AgentChatResponseDto noticeViolation = checkPaidLeaveNoticeViolation(draft, user);
         if (noticeViolation != null) {
             return noticeViolation;
         }
 
-        // Check Date Overlap violation immediately when dates are known
-        AgentChatResponseDto overlapViolationInDraft = checkDateOverlapViolation(draft, user);
-        if (overlapViolationInDraft != null) {
-            return overlapViolationInDraft;
+        // Check weekend restriction immediately when dates and leave type are known
+        AgentChatResponseDto weekendViolationInDraft = checkWeekendViolation(draft, user);
+        if (weekendViolationInDraft != null) {
+            return weekendViolationInDraft;
         }
 
         // If draft missing reason
@@ -900,6 +902,14 @@ public class AgentService {
             draft.setRefinedReason(intelligentlyRefineReason(leaveType, rawReason, user));
         }
 
+        // If start date is known, check overlap conflicts IMMEDIATELY!
+        if (draft.getStartDate() != null) {
+            AgentChatResponseDto overlapViolation = checkDateOverlapViolation(draft, user);
+            if (overlapViolation != null) {
+                return overlapViolation;
+            }
+        }
+
         if (leaveType == null) {
             userDrafts.put(user.getId(), draft);
             return promptForLeaveType(user);
@@ -927,16 +937,10 @@ public class AgentService {
             return noticeViolation;
         }
 
-        // Check weekend restriction immediately when dates are known
+        // Check weekend restriction immediately when dates and leave type are known
         AgentChatResponseDto weekendViolation = checkWeekendViolation(draft, user);
         if (weekendViolation != null) {
             return weekendViolation;
-        }
-
-        // Check Date Overlap violation immediately when dates are known
-        AgentChatResponseDto overlapViolation = checkDateOverlapViolation(draft, user);
-        if (overlapViolation != null) {
-            return overlapViolation;
         }
 
         // If reason was NOT provided, ask for reason interactively!

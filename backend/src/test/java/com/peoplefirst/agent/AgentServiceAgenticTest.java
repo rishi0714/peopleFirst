@@ -395,5 +395,42 @@ class AgentServiceAgenticTest {
         assertTrue(response.isActionExecuted());
         assertTrue(response.getReply().contains("Leave Request Submitted Successfully"));
     }
+
+    @Test
+    void applyLeaveOnDateWithOverlapFlagsConflictImmediatelyWithoutPromptingLeaveType() {
+        when(genAiClient.isConfigured()).thenReturn(false);
+        LocalDate targetDate = LocalDate.of(2026, 9, 9);
+        LeaveResponseDto existingLeave = Mockito.mock(LeaveResponseDto.class);
+        when(existingLeave.getStatus()).thenReturn(LeaveStatus.PENDING);
+        when(existingLeave.getStartDate()).thenReturn(LocalDate.of(2026, 9, 7));
+        when(existingLeave.getEndDate()).thenReturn(LocalDate.of(2026, 9, 10));
+        when(existingLeave.getLeaveType()).thenReturn(LeaveType.SICK);
+        when(leaveService.getLeavesForUser(employee.getId())).thenReturn(List.of(existingLeave));
+
+        // User says "apply for a leave on 2026-09-09" without specifying leave type
+        AgentChatResponseDto response = agentService.processMessage(
+                new AgentChatRequestDto("apply for a leave on " + targetDate, "conv-overlap-immediate"));
+
+        assertFalse(response.isActionExecuted());
+        assertTrue(response.getReply().contains("Overlapping leave requests on the same date are not permitted"));
+        assertTrue(response.getReply().contains("Sick Leave"));
+        assertFalse(response.getReply().contains("Which type of leave would you like to apply for?"));
+    }
+
+    @Test
+    void applyLeaveOnWeekendFlagsWeekendImmediately() {
+        when(genAiClient.isConfigured()).thenReturn(false);
+        LocalDate nextSunday = LocalDate.now();
+        while (nextSunday.getDayOfWeek() != java.time.DayOfWeek.SUNDAY) {
+            nextSunday = nextSunday.plusDays(1);
+        }
+
+        // User says "apply casual leave on Sunday"
+        AgentChatResponseDto response = agentService.processMessage(
+                new AgentChatRequestDto("apply casual leave on " + nextSunday, "conv-wknd-immediate"));
+
+        assertFalse(response.isActionExecuted());
+        assertTrue(response.getReply().contains("weekend") || response.getReply().contains("Sunday"));
+    }
 }
 
