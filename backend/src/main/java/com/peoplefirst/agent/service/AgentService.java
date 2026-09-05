@@ -1653,15 +1653,23 @@ public class AgentService {
         if (moveMatcher.find()) {
             LocalDate[] dFrom = intentParser.extractDates(moveMatcher.group(1));
             LocalDate[] dTo = intentParser.extractDates(moveMatcher.group(2));
-            if (dTo[0] != null) {
-                if (dFrom[0] != null && target.getStartDate().equals(dFrom[0])) {
-                    long originalDuration = ChronoUnit.DAYS.between(target.getStartDate(), target.getEndDate());
-                    dates[0] = dTo[0];
-                    dates[1] = dTo[0].plusDays(originalDuration);
-                } else if (dFrom[0] != null) {
-                    dates[0] = dFrom[0];
-                    dates[1] = dTo[0];
+            if (dFrom[0] != null) {
+                LeaveResponseDto matchByDate = editable.stream()
+                        .filter(l -> l.getStartDate().equals(dFrom[0]))
+                        .findFirst()
+                        .orElse(null);
+                if (matchByDate != null) {
+                    target = matchByDate;
+                    editDraft.setLeaveId(target.getId());
+                    editDraft.setLeaveType(target.getLeaveType());
+                    editDraft.setRawReason(target.getReason());
+                    editDraft.setRefinedReason(target.getReason());
                 }
+            }
+            if (dTo[0] != null) {
+                long originalDuration = ChronoUnit.DAYS.between(target.getStartDate(), target.getEndDate());
+                dates[0] = dTo[0];
+                dates[1] = dTo[0].plusDays(originalDuration);
             }
         } else {
             Matcher toMatcher = Pattern.compile("(?i)(?:change|chnage|chagne|move|reschedule|shift|postpone|modify|update|edit).*?\\bto\\s+(\\S+)").matcher(message);

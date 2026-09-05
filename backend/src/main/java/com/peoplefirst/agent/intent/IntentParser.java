@@ -722,14 +722,15 @@ public class IntentParser {
             } catch (Exception ignored) {}
         }
 
-        // 2. Match single ordinal day: e.g. "from 8th", "on 8th", "8th", "on the 9th", "9th", "from 15th"
+        // 2. Match single ordinal (e.g. "8th", "21st") or day with date prefix (e.g. "on 8", "from 21", "date 22")
         Pattern singlePat = Pattern.compile(
-                "\\b(?:on|from|starting|for)?\\s*(?:the\\s+)?(\\d{1,2})(?:st|nd|rd|th)\\b"
+                "\\b(?:(?:on|from|starting|date|leave on)\\s+(?:the\\s+)?(\\d{1,2})(?:st|nd|rd|th)?|(\\d{1,2})(?:st|nd|rd|th))\\b(?!\\s*(?:work)?days?|\\s*hours?|\\s*months?|\\s*mins?)"
         );
         Matcher singleMatcher = singlePat.matcher(lower);
         if (singleMatcher.find()) {
             try {
-                int d = Integer.parseInt(singleMatcher.group(1));
+                String match = singleMatcher.group(1) != null ? singleMatcher.group(1) : singleMatcher.group(2);
+                int d = Integer.parseInt(match);
                 if (d >= 1 && d <= 31) {
                     LocalDate first = resolveDayOfMonth(d, today);
                     return new LocalDate[]{first, null};
