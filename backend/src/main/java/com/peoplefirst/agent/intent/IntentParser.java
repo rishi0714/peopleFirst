@@ -167,12 +167,17 @@ public class IntentParser {
         // 4. Edit / Update Leave
         if (lower.startsWith("edit") || lower.startsWith("edidt") || lower.startsWith("update") ||
                 lower.startsWith("modify") || lower.startsWith("reschedule") || lower.startsWith("change ") ||
+                lower.startsWith("chnage") || lower.startsWith("chagne") ||
                 lower.startsWith("move ") || lower.startsWith("shift ") ||
                 lower.contains("edit leave") || lower.contains("edit my") || lower.contains("edidt") ||
                 lower.contains("update leave") || lower.contains("update my") || lower.contains("modify leave") ||
                 lower.contains("modify my") || lower.contains("reschedule") ||
-                (lower.contains("change") && (lower.contains("leave") || lower.contains("date") ||
-                        extractLeaveType(lower) != null || extractDates(lower)[0] != null))) {
+                lower.contains("change my") || lower.contains("chnage my") || lower.contains("chagne my") ||
+                lower.contains("change leave") || lower.contains("chnage leave") || lower.contains("chagne leave") ||
+                lower.contains("want to change") || lower.contains("want to chnage") || lower.contains("want to edit") ||
+                lower.contains("want to update") ||
+                ((lower.contains("change") || lower.contains("chnage") || lower.contains("chagne") || lower.contains("modify") || lower.contains("update") || lower.contains("edit") || lower.contains("reschedule") || lower.contains("shift")) &&
+                        (lower.contains("leave") || lower.contains("date") || lower.contains("from") || extractLeaveType(lower) != null || extractDates(lower)[0] != null))) {
             return AgentIntent.EDIT_LEAVE;
         }
 
@@ -373,6 +378,16 @@ public class IntentParser {
      * TIER 3: Context-aware inference based on previous conversation turn.
      */
     private AgentIntent contextAwareResolve(String lower, ConversationContext context) {
+        if (lower.contains("change") || lower.contains("chnage") || lower.contains("chagne") ||
+                lower.contains("edit") || lower.contains("edidt") || lower.contains("update") ||
+                lower.contains("modify") || lower.contains("reschedule") || lower.contains("shift") ||
+                lower.contains("move") || lower.contains("cancel") || lower.contains("cancle") ||
+                lower.contains("cancal") || lower.contains("balance") || lower.contains("policy") ||
+                lower.contains("policies") || lower.contains("view leave") || lower.contains("my leave") ||
+                lower.contains("ticket")) {
+            return AgentIntent.UNKNOWN;
+        }
+
         ConversationContext.PromptType lastPrompt = context.getLastPromptType();
 
         switch (lastPrompt) {

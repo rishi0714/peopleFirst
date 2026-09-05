@@ -1649,7 +1649,7 @@ public class AgentService {
         String extractedReason = intentParser.extractRawReason(message);
 
         // Check if pattern is: "change/move/reschedule ... from <oldDate> to <newDate>"
-        Matcher moveMatcher = Pattern.compile("(?i)(?:change|move|reschedule|shift|postpone).*?\\bfrom\\s+(\\S+)\\s+to\\s+(\\S+)").matcher(message);
+        Matcher moveMatcher = Pattern.compile("(?i)(?:change|chnage|chagne|move|reschedule|shift|postpone|modify|update|edit).*?\\bfrom\\s+(?:date\\s+(?:from\\s+)?)?(\\S+)\\s+to\\s+(\\S+)").matcher(message);
         if (moveMatcher.find()) {
             LocalDate[] dFrom = intentParser.extractDates(moveMatcher.group(1));
             LocalDate[] dTo = intentParser.extractDates(moveMatcher.group(2));
@@ -1661,6 +1661,16 @@ public class AgentService {
                 } else if (dFrom[0] != null) {
                     dates[0] = dFrom[0];
                     dates[1] = dTo[0];
+                }
+            }
+        } else {
+            Matcher toMatcher = Pattern.compile("(?i)(?:change|chnage|chagne|move|reschedule|shift|postpone|modify|update|edit).*?\\bto\\s+(\\S+)").matcher(message);
+            if (toMatcher.find()) {
+                LocalDate[] dTo = intentParser.extractDates(toMatcher.group(1));
+                if (dTo[0] != null) {
+                    long originalDuration = ChronoUnit.DAYS.between(target.getStartDate(), target.getEndDate());
+                    dates[0] = dTo[0];
+                    dates[1] = dTo[0].plusDays(originalDuration);
                 }
             }
         }
