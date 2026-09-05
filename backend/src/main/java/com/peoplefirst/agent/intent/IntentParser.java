@@ -943,7 +943,7 @@ public class IntentParser {
         }
 
         // Check explicit markers
-        String[] markers = {"because ", "due to ", "reason: ", "reason is ", "as i am ", "as i have ", "kyunki ", "isliye "};
+        String[] markers = {"because of ", "because ", "due to ", "reason: ", "reason is ", "reason being ", "reason - ", "reason ", "as i am ", "as i have ", "kyunki ", "isliye ", "vajah ", "karan "};
         for (String marker : markers) {
             int idx = lower.indexOf(marker);
             if (idx != -1) {
@@ -970,7 +970,8 @@ public class IntentParser {
                 "fever", "headache", "migraine", "flu", "cold", "cough", "food poisoning",
                 "stomach pain", "stomach infection", "unwell", "illness",
                 "family function", "sister's wedding", "brother's wedding", "wedding", "marriage",
-                "personal work", "urgent work", "personal commitment", "family emergency",
+                "personal work", "personal reason", "personal reasons", "personal matter", "personal",
+                "urgent work", "personal commitment", "family emergency", "emergency",
                 "going to native", "native place", "travel", "travelling",
                 "vacation", "burnout", "stress", "fatigue", "exhaustion",
                 // Hindi reason keywords

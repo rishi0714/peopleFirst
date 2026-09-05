@@ -379,5 +379,21 @@ class AgentServiceAgenticTest {
         assertTrue(response.getReply().contains("weekend") || response.getReply().contains("Sunday"));
         assertTrue(response.getReply().contains("Monday to Friday"));
     }
+
+    @Test
+    void applyLeaveWithInlineReasonIsExecutedInSingleTurn() {
+        when(genAiClient.isConfigured()).thenReturn(false);
+        stubApplyLeaveExecution();
+        // Next Monday date
+        LocalDate nextMonday = LocalDate.now();
+        while (nextMonday.getDayOfWeek() != java.time.DayOfWeek.MONDAY) {
+            nextMonday = nextMonday.plusDays(1);
+        }
+
+        AgentChatResponseDto response = agentService.processMessage(
+                new AgentChatRequestDto("apply leave " + nextMonday + " casual reason personal", "conv-reason-1"));
+        assertTrue(response.isActionExecuted());
+        assertTrue(response.getReply().contains("Leave Request Submitted Successfully"));
+    }
 }
 
