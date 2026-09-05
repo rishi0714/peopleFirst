@@ -969,12 +969,18 @@ public class AgentService {
         LocalDate start = draft.getStartDate();
         LocalDate end = draft.getEndDate() != null ? draft.getEndDate() : start;
 
-        if (start.getDayOfWeek() == DayOfWeek.SATURDAY || start.getDayOfWeek() == DayOfWeek.SUNDAY ||
-                end.getDayOfWeek() == DayOfWeek.SATURDAY || end.getDayOfWeek() == DayOfWeek.SUNDAY) {
-            DayOfWeek day = start.getDayOfWeek();
+        LocalDate weekendDate = null;
+        if (start.getDayOfWeek() == DayOfWeek.SATURDAY || start.getDayOfWeek() == DayOfWeek.SUNDAY) {
+            weekendDate = start;
+        } else if (end.getDayOfWeek() == DayOfWeek.SATURDAY || end.getDayOfWeek() == DayOfWeek.SUNDAY) {
+            weekendDate = end;
+        }
+
+        if (weekendDate != null) {
+            DayOfWeek day = weekendDate.getDayOfWeek();
             String dayName = day.toString().charAt(0) + day.toString().substring(1).toLowerCase();
-            boolean isTomorrow = start.equals(LocalDate.now().plusDays(1));
-            String dateLabel = isTomorrow ? "Tomorrow (" + start + ") is " + dayName : start + " is " + dayName;
+            boolean isTomorrow = weekendDate.equals(LocalDate.now().plusDays(1));
+            String dateLabel = isTomorrow ? "Tomorrow (" + weekendDate + ") is " + dayName : weekendDate + " is " + dayName;
 
             draft.setStartDate(null);
             draft.setEndDate(null);
