@@ -1618,6 +1618,34 @@ public class AgentService {
             return response;
         }
 
+        boolean isStartDate = lower.contains("start date") || lower.contains("startdate") ||
+                lower.contains("starting date") || lower.contains("starting from") ||
+                lower.startsWith("and start date") || lower.startsWith("start date") ||
+                lower.contains("change start date") || lower.contains("edit start date") ||
+                lower.contains("update start date") || lower.contains("from date to");
+
+        boolean isEndDate = lower.contains("end date") || lower.contains("enddate") ||
+                lower.contains("ending date") || lower.contains("ending on") ||
+                lower.startsWith("and end date") || lower.startsWith("end date") ||
+                lower.contains("change end date") || lower.contains("edit end date") ||
+                lower.contains("update end date") || lower.contains("to date");
+
+        // Parse date transitions (e.g. "from 21st to 22nd", "23rd to 22nd", "from 21 to 22")
+        LocalDate dFromVal = null;
+        LocalDate dToVal = null;
+        boolean fromMatched = false;
+
+        Matcher moveMatcher = Pattern.compile("(?i)(?:\\bfrom\\s+)?(?:date\\s+)?(\\d{1,2}(?:st|nd|rd|th)?|\\d{4}[-/.]\\d{1,2}[-/.]\\d{1,2}|\\d{1,2}[-/.]\\d{1,2}[-/.]\\d{2,4})\\s+to\\s+(\\d{1,2}(?:st|nd|rd|th)?|\\d{4}[-/.]\\d{1,2}[-/.]\\d{1,2}|\\d{1,2}[-/.]\\d{1,2}[-/.]\\d{2,4})").matcher(message);
+        if (moveMatcher.find()) {
+            LocalDate[] dF = intentParser.extractDates(moveMatcher.group(1));
+            LocalDate[] dT = intentParser.extractDates(moveMatcher.group(2));
+            if (dF[0] != null && dT[0] != null) {
+                dFromVal = dF[0];
+                dToVal = dT[0];
+                fromMatched = true;
+            }
+        }
+
         // Identify target leave
         UUID reqUuid = intentParser.extractUuid(message);
         LeaveResponseDto target = null;
@@ -1628,6 +1656,15 @@ public class AgentService {
             LeaveType specifiedType = intentParser.extractLeaveType(message);
             if (specifiedType != null) {
                 target = editable.stream().filter(l -> l.getLeaveType() == specifiedType).findFirst().orElse(null);
+            }
+        }
+        if (target == null && dFromVal != null) {
+            if (isEndDate && !isStartDate) {
+                final LocalDate matchDate = dFromVal;
+                target = editable.stream().filter(l -> l.getEndDate() != null && l.getEndDate().equals(matchDate)).findFirst().orElse(null);
+            } else {
+                final LocalDate matchDate = dFromVal;
+                target = editable.stream().filter(l -> l.getStartDate() != null && l.getStartDate().equals(matchDate)).findFirst().orElse(null);
             }
         }
         if (target == null) {
@@ -1644,51 +1681,66 @@ public class AgentService {
         editDraft.setRawReason(target.getReason());
         editDraft.setRefinedReason(target.getReason());
 
-        // Check if message directly provided new dates or new reason
-        LocalDate[] dates = intentParser.extractDates(message);
-        String extractedReason = intentParser.extractRawReason(message);
-
-        // Check if pattern is: "change/move/reschedule ... from <oldDate> to <newDate>"
-        Matcher moveMatcher = Pattern.compile("(?i)(?:change|chnage|chagne|move|reschedule|shift|postpone|modify|update|edit).*?\\bfrom\\s+(?:date\\s+(?:from\\s+)?)?(\\S+)\\s+to\\s+(\\S+)").matcher(message);
-        if (moveMatcher.find()) {
-            LocalDate[] dFrom = intentParser.extractDates(moveMatcher.group(1));
-            LocalDate[] dTo = intentParser.extractDates(moveMatcher.group(2));
-            if (dFrom[0] != null) {
-                LeaveResponseDto matchByDate = editable.stream()
-                        .filter(l -> l.getStartDate().equals(dFrom[0]))
-                        .findFirst()
-                        .orElse(null);
-                if (matchByDate != null) {
-                    target = matchByDate;
-                    editDraft.setLeaveId(target.getId());
-                    editDraft.setLeaveType(target.getLeaveType());
-                    editDraft.setRawReason(target.getReason());
-                    editDraft.setRefinedReason(target.getReason());
+        boolean hasNewDates = false;
+        if (fromMatched && dFromVal != null && dToVal != null) {
+            if (isStartDate && !isEndDate) {
+                editDraft.setStartDate(dToVal);
+                if (editDraft.getEndDate() == null || editDraft.getEndDate().isBefore(dToVal)) {
+                    editDraft.setEndDate(dToVal);
                 }
-            }
-            if (dTo[0] != null) {
-                long originalDuration = ChronoUnit.DAYS.between(target.getStartDate(), target.getEndDate());
-                dates[0] = dTo[0];
-                dates[1] = dTo[0].plusDays(originalDuration);
+                hasNewDates = true;
+            } else if (isEndDate && !isStartDate) {
+                editDraft.setEndDate(dToVal);
+                if (editDraft.getStartDate() == null || editDraft.getStartDate().isAfter(dToVal)) {
+                    editDraft.setStartDate(dToVal);
+                }
+                hasNewDates = true;
+            } else {
+                final LocalDate checkFrom = dFromVal;
+                boolean matchedLeaveStartDate = editable.stream().anyMatch(l -> l.getStartDate().equals(checkFrom));
+                if (matchedLeaveStartDate) {
+                    long dur = ChronoUnit.DAYS.between(target.getStartDate(), target.getEndDate());
+                    editDraft.setStartDate(dToVal);
+                    editDraft.setEndDate(dToVal.plusDays(dur));
+                } else {
+                    editDraft.setStartDate(dFromVal);
+                    editDraft.setEndDate(dToVal);
+                }
+                hasNewDates = true;
             }
         } else {
-            Matcher toMatcher = Pattern.compile("(?i)(?:change|chnage|chagne|move|reschedule|shift|postpone|modify|update|edit).*?\\bto\\s+(\\S+)").matcher(message);
-            if (toMatcher.find()) {
-                LocalDate[] dTo = intentParser.extractDates(toMatcher.group(1));
-                if (dTo[0] != null) {
-                    long originalDuration = ChronoUnit.DAYS.between(target.getStartDate(), target.getEndDate());
-                    dates[0] = dTo[0];
-                    dates[1] = dTo[0].plusDays(originalDuration);
+            LocalDate[] directDates = intentParser.extractDates(message);
+            if (directDates[0] != null) {
+                if (isStartDate && !isEndDate) {
+                    editDraft.setStartDate(directDates[0]);
+                    if (editDraft.getEndDate() == null || editDraft.getEndDate().isBefore(directDates[0])) {
+                        editDraft.setEndDate(directDates[0]);
+                    }
+                    hasNewDates = true;
+                } else if (isEndDate && !isStartDate) {
+                    editDraft.setEndDate(directDates[0]);
+                    if (editDraft.getStartDate() == null || editDraft.getStartDate().isAfter(directDates[0])) {
+                        editDraft.setStartDate(directDates[0]);
+                    }
+                    hasNewDates = true;
+                } else {
+                    long dur = ChronoUnit.DAYS.between(target.getStartDate(), target.getEndDate());
+                    editDraft.setStartDate(directDates[0]);
+                    editDraft.setEndDate(directDates[1] != null && !directDates[1].equals(directDates[0])
+                            ? directDates[1] : directDates[0].plusDays(dur));
+                    hasNewDates = true;
                 }
             }
         }
 
+        String extractedReason = intentParser.extractRawReason(message);
         if (extractedReason == null && (lower.contains("same reason") || lower.equals("same") || lower.contains("as before") || lower.contains("keep same"))) {
             extractedReason = target.getReason();
         }
 
         // Check for backdate / today
-        if ((dates[0] != null && !dates[0].isAfter(LocalDate.now())) || lower.contains("back date") || lower.contains("backdate") || lower.contains("past date") || lower.contains("today")) {
+        if ((hasNewDates && editDraft.getStartDate() != null && !editDraft.getStartDate().isAfter(LocalDate.now())) ||
+                lower.contains("back date") || lower.contains("backdate") || lower.contains("past date") || lower.contains("today")) {
             userEditDrafts.remove(user.getId());
             AgentChatResponseDto response = new AgentChatResponseDto(
                     "You can't apply leave for backdate.",
@@ -1698,13 +1750,7 @@ public class AgentService {
             return response;
         }
 
-        boolean hasNewDates = (dates[0] != null);
         boolean hasNewReason = (extractedReason != null);
-
-        if (hasNewDates) {
-            editDraft.setStartDate(dates[0]);
-            editDraft.setEndDate(dates[1] != null ? dates[1] : dates[0]);
-        }
         if (hasNewReason) {
             editDraft.setRawReason(extractedReason);
             editDraft.setRefinedReason(intelligentlyRefineReason(editDraft.getLeaveType(), extractedReason, user));
@@ -1764,20 +1810,77 @@ public class AgentService {
             return response;
         }
 
-        LocalDate[] dates = intentParser.extractDates(message);
-        if ((dates[0] != null && dates[0].isBefore(LocalDate.now())) || lower.contains("back date") || lower.contains("backdate") || lower.contains("past date")) {
-            userEditDrafts.remove(user.getId());
-            AgentChatResponseDto response = new AgentChatResponseDto(
-                    "You can't apply leave for backdate.",
-                    AgentIntent.EDIT_LEAVE.name()
-            );
-            response.setQuickReplies(List.of("Tomorrow", "Next Week", "Check my balances", "Raise a support ticket"));
-            return response;
+        boolean isStartDate = lower.contains("start date") || lower.contains("startdate") ||
+                lower.contains("starting date") || lower.contains("starting from") ||
+                lower.startsWith("and start date") || lower.startsWith("start date") ||
+                lower.contains("change start date") || lower.contains("edit start date") ||
+                lower.contains("update start date") || lower.contains("from date to");
+
+        boolean isEndDate = lower.contains("end date") || lower.contains("enddate") ||
+                lower.contains("ending date") || lower.contains("ending on") ||
+                lower.startsWith("and end date") || lower.startsWith("end date") ||
+                lower.contains("change end date") || lower.contains("edit end date") ||
+                lower.contains("update end date") || lower.contains("to date");
+
+        LocalDate dFromVal = null;
+        LocalDate dToVal = null;
+        boolean fromMatched = false;
+
+        Matcher moveMatcher = Pattern.compile("(?i)(?:\\bfrom\\s+)?(?:date\\s+)?(\\d{1,2}(?:st|nd|rd|th)?|\\d{4}[-/.]\\d{1,2}[-/.]\\d{1,2}|\\d{1,2}[-/.]\\d{1,2}[-/.]\\d{2,4})\\s+to\\s+(\\d{1,2}(?:st|nd|rd|th)?|\\d{4}[-/.]\\d{1,2}[-/.]\\d{1,2}|\\d{1,2}[-/.]\\d{1,2}[-/.]\\d{2,4})").matcher(message);
+        if (moveMatcher.find()) {
+            LocalDate[] dF = intentParser.extractDates(moveMatcher.group(1));
+            LocalDate[] dT = intentParser.extractDates(moveMatcher.group(2));
+            if (dF[0] != null && dT[0] != null) {
+                dFromVal = dF[0];
+                dToVal = dT[0];
+                fromMatched = true;
+            }
         }
 
-        if (dates[0] != null) {
-            editDraft.setStartDate(dates[0]);
-            editDraft.setEndDate(dates[1] != null ? dates[1] : dates[0]);
+        if (fromMatched && dFromVal != null && dToVal != null) {
+            if (isStartDate && !isEndDate) {
+                editDraft.setStartDate(dToVal);
+                if (editDraft.getEndDate() == null || editDraft.getEndDate().isBefore(dToVal)) {
+                    editDraft.setEndDate(dToVal);
+                }
+            } else if (isEndDate && !isStartDate) {
+                editDraft.setEndDate(dToVal);
+                if (editDraft.getStartDate() == null || editDraft.getStartDate().isAfter(dToVal)) {
+                    editDraft.setStartDate(dToVal);
+                }
+            } else {
+                long dur = ChronoUnit.DAYS.between(editDraft.getStartDate(), editDraft.getEndDate());
+                editDraft.setStartDate(dToVal);
+                editDraft.setEndDate(dToVal.plusDays(dur));
+            }
+        } else {
+            LocalDate[] dates = intentParser.extractDates(message);
+            if ((dates[0] != null && !dates[0].isAfter(LocalDate.now())) || lower.contains("back date") || lower.contains("backdate") || lower.contains("past date")) {
+                userEditDrafts.remove(user.getId());
+                AgentChatResponseDto response = new AgentChatResponseDto(
+                        "You can't apply leave for backdate.",
+                        AgentIntent.EDIT_LEAVE.name()
+                );
+                response.setQuickReplies(List.of("Tomorrow", "Next Week", "Check my balances", "Raise a support ticket"));
+                return response;
+            }
+
+            if (dates[0] != null) {
+                if (isStartDate && !isEndDate) {
+                    editDraft.setStartDate(dates[0]);
+                    if (editDraft.getEndDate() == null || editDraft.getEndDate().isBefore(dates[0])) {
+                        editDraft.setEndDate(dates[0]);
+                    }
+                } else if (isEndDate && !isStartDate) {
+                    editDraft.setEndDate(dates[0]);
+                    if (editDraft.getStartDate() == null || editDraft.getStartDate().isAfter(dates[0])) {
+                        editDraft.setStartDate(dates[0]);
+                    }
+                } else {
+                    editDraft.setStartDate(dates[0]);
+                    editDraft.setEndDate(dates[1] != null ? dates[1] : dates[0]);
+                }
+            }
         }
 
         String rawReason = intentParser.extractRawReason(message);

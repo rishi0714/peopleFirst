@@ -169,6 +169,8 @@ public class IntentParser {
                 lower.startsWith("modify") || lower.startsWith("reschedule") || lower.startsWith("change ") ||
                 lower.startsWith("chnage") || lower.startsWith("chagne") ||
                 lower.startsWith("move ") || lower.startsWith("shift ") ||
+                lower.startsWith("and end date") || lower.startsWith("and start date") ||
+                lower.startsWith("and date") || lower.startsWith("end date") || lower.startsWith("start date") ||
                 lower.contains("edit leave") || lower.contains("edit my") || lower.contains("edidt") ||
                 lower.contains("update leave") || lower.contains("update my") || lower.contains("modify leave") ||
                 lower.contains("modify my") || lower.contains("reschedule") ||
@@ -176,7 +178,12 @@ public class IntentParser {
                 lower.contains("change leave") || lower.contains("chnage leave") || lower.contains("chagne leave") ||
                 lower.contains("want to change") || lower.contains("want to chnage") || lower.contains("want to edit") ||
                 lower.contains("want to update") ||
-                ((lower.contains("change") || lower.contains("chnage") || lower.contains("chagne") || lower.contains("modify") || lower.contains("update") || lower.contains("edit") || lower.contains("reschedule") || lower.contains("shift")) &&
+                lower.contains("end date from") || lower.contains("start date from") ||
+                lower.contains("end date to") || lower.contains("start date to") ||
+                lower.contains("change start date") || lower.contains("change end date") ||
+                lower.contains("edit start date") || lower.contains("edit end date") ||
+                lower.contains("update start date") || lower.contains("update end date") ||
+                ((lower.contains("change") || lower.contains("chnage") || lower.contains("chagne") || lower.contains("modify") || lower.contains("update") || lower.contains("edit") || lower.contains("reschedule") || lower.contains("shift") || lower.contains("move")) &&
                         (lower.contains("leave") || lower.contains("date") || lower.contains("from") || extractLeaveType(lower) != null || extractDates(lower)[0] != null))) {
             return AgentIntent.EDIT_LEAVE;
         }

@@ -497,5 +497,71 @@ class AgentServiceAgenticTest {
         assertTrue(response.getReply().contains("Leave Request Updated Successfully"));
         assertTrue(response.getReply().contains("2026-09-22 to 2026-09-22 (1.0 day)"));
     }
+
+    @Test
+    void editStartDateOnly_updatesStartDateWhileKeepingEndDate() {
+        when(genAiClient.isConfigured()).thenReturn(false);
+        UUID leaveId = UUID.randomUUID();
+        LeaveResponseDto existing = Mockito.mock(LeaveResponseDto.class);
+        when(existing.getId()).thenReturn(leaveId);
+        when(existing.getStatus()).thenReturn(LeaveStatus.PENDING);
+        when(existing.getStartDate()).thenReturn(LocalDate.of(2026, 9, 21));
+        when(existing.getEndDate()).thenReturn(LocalDate.of(2026, 9, 22));
+        when(existing.getLeaveType()).thenReturn(LeaveType.CASUAL);
+        when(existing.getLeaveTypeDisplayName()).thenReturn("Casual Leave");
+        when(existing.getReason()).thenReturn("Personal work");
+        when(leaveService.getLeavesForUser(employee.getId())).thenReturn(List.of(existing));
+
+        LeaveResponseDto updated = Mockito.mock(LeaveResponseDto.class);
+        when(updated.getId()).thenReturn(leaveId);
+        when(updated.getStatus()).thenReturn(LeaveStatus.PENDING);
+        when(updated.getStartDate()).thenReturn(LocalDate.of(2026, 9, 22));
+        when(updated.getEndDate()).thenReturn(LocalDate.of(2026, 9, 22));
+        when(updated.getLeaveTypeDisplayName()).thenReturn("Casual Leave");
+        when(updated.getReason()).thenReturn("Personal work");
+        when(updated.getTotalDays()).thenReturn(1.0);
+        when(leaveService.editLeave(eq(leaveId), any(), any())).thenReturn(updated);
+
+        AgentChatResponseDto response = agentService.processMessage(
+                new AgentChatRequestDto("change my casual leave start date from 21st to 22nd", "conv-edit-start-date"));
+
+        assertTrue(response.isActionExecuted());
+        assertEquals("EDIT_LEAVE", response.getActionName());
+        assertTrue(response.getReply().contains("Leave Request Updated Successfully"));
+        assertTrue(response.getReply().contains("2026-09-22 to 2026-09-22 (1.0 day)"));
+    }
+
+    @Test
+    void editEndDateFollowUp_andEndDate23rdTo22nd_updatesEndDate() {
+        when(genAiClient.isConfigured()).thenReturn(false);
+        UUID leaveId = UUID.randomUUID();
+        LeaveResponseDto existing = Mockito.mock(LeaveResponseDto.class);
+        when(existing.getId()).thenReturn(leaveId);
+        when(existing.getStatus()).thenReturn(LeaveStatus.PENDING);
+        when(existing.getStartDate()).thenReturn(LocalDate.of(2026, 9, 22));
+        when(existing.getEndDate()).thenReturn(LocalDate.of(2026, 9, 23));
+        when(existing.getLeaveType()).thenReturn(LeaveType.CASUAL);
+        when(existing.getLeaveTypeDisplayName()).thenReturn("Casual Leave");
+        when(existing.getReason()).thenReturn("Personal work");
+        when(leaveService.getLeavesForUser(employee.getId())).thenReturn(List.of(existing));
+
+        LeaveResponseDto updated = Mockito.mock(LeaveResponseDto.class);
+        when(updated.getId()).thenReturn(leaveId);
+        when(updated.getStatus()).thenReturn(LeaveStatus.PENDING);
+        when(updated.getStartDate()).thenReturn(LocalDate.of(2026, 9, 22));
+        when(updated.getEndDate()).thenReturn(LocalDate.of(2026, 9, 22));
+        when(updated.getLeaveTypeDisplayName()).thenReturn("Casual Leave");
+        when(updated.getReason()).thenReturn("Personal work");
+        when(updated.getTotalDays()).thenReturn(1.0);
+        when(leaveService.editLeave(eq(leaveId), any(), any())).thenReturn(updated);
+
+        AgentChatResponseDto response = agentService.processMessage(
+                new AgentChatRequestDto("and end date 23rd to 22nd", "conv-edit-end-date"));
+
+        assertTrue(response.isActionExecuted());
+        assertEquals("EDIT_LEAVE", response.getActionName());
+        assertTrue(response.getReply().contains("Leave Request Updated Successfully"));
+        assertTrue(response.getReply().contains("2026-09-22 to 2026-09-22 (1.0 day)"));
+    }
 }
 
